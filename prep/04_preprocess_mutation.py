@@ -224,6 +224,10 @@ def write_table2(tables, gene_bin, features, recurrent, kept, pw_summary, thr):
         fh.write(f"{gene_bin.shape[0]} patients · {gene_bin.shape[1]} genes mutated "
                  f"in ≥1 patient · {features['n_nonsilent'].sum():,} non-silent "
                  f"variants\n\n")
+        fh.write("> These are all patients with mutation calls, before the analysis "
+                 "cohort is formed. The analysis itself uses the 440 patients who also "
+                 "have every other block; see cohort_flow.csv and "
+                 "cohort_characteristics.md.\n\n")
         fh.write(f"## Genes altered in ≥{thr:.0%} of the cohort "
                  f"(top {len(top)} of {len(recurrent)})\n\n")
         fh.write("> Reported for description only. Both the threshold and the "
@@ -233,7 +237,8 @@ def write_table2(tables, gene_bin, features, recurrent, kept, pw_summary, thr):
             fh.write(f"> **{len(recurrent)} genes clear {thr:.0%}, not the ~26 the "
                      f"protocol assumed.** LUAD's mutation burden (median 4.8 "
                      f"mut/Mb) puts that many binary features at EPV "
-                     f"{210 / len(recurrent):.2f} against 210 PFI events, and most "
+                     f"{210 / len(recurrent):.2f} against the 210 PFI events of the source "
+                     f"cohort (509 patients, before censoring at 60 months), and most "
                      f"are length-biased passengers. The block is capped at the "
                      f"{len(top)} most frequent; driver biology enters through the "
                      f"pathway features below.\n\n")

@@ -1,7 +1,9 @@
-# Table 3. Baseline characteristics of the analysis cohort
+# Table 3. Baseline characteristics of the source cohort
 
 TCGA-LUAD, 509 patients with clinical covariates and a usable progression-free interval.
 210 PFI events (41.3%); median follow-up 1.7 years among the censored.
+
+> This is the source cohort, before the analysis cohort is formed and before follow-up is censored at 60 months. The analysis uses the 440 of these patients who have all four blocks (176 events within 60 months); see cohort_flow.csv and cohort_characteristics.md.
 
 Descriptive only; no between-group tests are reported, because a table of
 cohort characteristics is not a univariable prognostic analysis.

@@ -236,6 +236,12 @@ def main() -> int:
             tests.append({"list_a": a, "list_b": b, **B.between_edges_test(G, named[a], named[b], 2000, seed)})
     pd.DataFrame(tests).to_csv(tables / "biology_network_links.csv", index=False)
 
+    # ---- how central is each gene? -----------------------------------------
+    # On the genes the figures draw (modules of 4 or more). Step 4b checks
+    # these numbers against Cytoscape's own analysis when Cytoscape is there.
+    drawn, _ = B.module_layout(G)
+    B.network_statistics(G, set(drawn)).to_csv(tables / "biology_network_centrality.csv", index=False)
+
     # ---- modules and what they are enriched for ---------------------------
     mod = pd.DataFrame([{"gene": g, **d} for g, d in G.nodes(data=True)])
     rows, enrich = [], []
@@ -243,13 +249,14 @@ def main() -> int:
         row = {"module": m, "genes": len(g), "mean_cox_z": g["cox_z"].mean(),
                **{name: int(g[name].sum()) for name in lists},
                "hub_genes": ", ".join(sorted(g["gene"], key=lambda x: -G.degree[x])[:8])}
-        if len(g) >= 8 and not args.offline:
-            e = B.string_enrichment(list(g["gene"]), int(s["species"]))
+        if len(g) >= 8:
+            e = B.string_enrichment(list(g["gene"]), int(s["species"]),
+                                    net_dir / "string_enrichment.tsv", args.refresh, args.offline)
             if len(e):
-                e = e[e["category"].isin(["Process", "KEGG", "RCTM", "HALLMARK"])].sort_values("fdr").head(5)
+                e = e.sort_values("fdr").head(5)
                 for r in e.itertuples():
                     enrich.append({"module": m, "category": r.category, "term": r.description,
-                                   "genes_in_term": r.number_of_genes, "fdr": r.fdr})
+                                   "genes_in_term": int(r.number_of_genes), "fdr": float(r.fdr)})
                 if len(e):
                     row["top_term"] = e.iloc[0]["description"]
         rows.append(row)

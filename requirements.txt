@@ -1,14 +1,24 @@
-# Python dependencies. Exact versions are frozen in results/pip_freeze.txt.
-numpy
-pandas
-pyarrow
-pyyaml
-scipy
-scikit-survival      # pulls a compatible scikit-learn
-mofapy2              # MOFA factor model
-networkx             # gene network, modules, export for Cytoscape
-requests             # STRING API
-matplotlib
-tabulate
-pytest
-py4cytoscape         # drives the Cytoscape desktop program (step 4b)
+# Python packages this project uses, at the exact versions the published
+# numbers were computed with (Python 3.13).
+#
+#   make setup        creates .venv and installs these
+#
+# requirements.lock lists every installed package, including the ones these
+# pull in, and holds them to the same versions.
+-c requirements.lock
+
+numpy==2.5.5
+pandas==3.1.1
+pyarrow==26.0.1          # reads and writes the .parquet data files
+PyYAML==6.0.4            # reads config/config.yaml
+scipy==1.18.1
+scikit-learn==1.9.1
+scikit-survival==0.28.0  # penalised Cox, random survival forest, concordance
+mofapy2==0.7.5           # MOFA factor model
+networkx==3.7            # gene network, modules, network statistics
+requests==2.34.2         # asks the STRING database (step 4, first run only)
+matplotlib==3.11.2       # figures
+pillow==13.0.0           # trims the Cytoscape pictures
+tabulate==0.10.0         # markdown tables in RESULTS.md
+pytest==9.2.0            # the tests
+py4cytoscape==1.13.0     # drives the Cytoscape desktop program (step 4b, optional)

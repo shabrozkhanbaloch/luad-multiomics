@@ -2,7 +2,12 @@
 """Step 4b. Send the gene network to Cytoscape: style, layout, analyse, export.
 
     python scripts/04b_cytoscape.py              # uses Cytoscape if open, else starts it
-    python scripts/04b_cytoscape.py --no-launch  # fail instead of starting Cytoscape
+    python scripts/04b_cytoscape.py --no-launch  # do not start Cytoscape if it is closed
+    python scripts/04b_cytoscape.py --require    # fail, instead of skipping, without Cytoscape
+
+This step is optional. On a machine without Cytoscape it prints a message and
+stops without an error, so `make all` still finishes; nothing later depends on
+it, and the network figures it would redraw are already in the repository.
 
 Reads results/network/network.graphml (step 4). Drives the Cytoscape desktop
 program through its automation port (CyREST, localhost:1234), so what you see
@@ -13,9 +18,10 @@ in the Cytoscape window is exactly what the pipeline produced:
     - style "LUAD Cox z":  node colour = Cox z, blue (protective) to red (risk)
     - Cytoscape's own network analysis (degree, betweenness, ...) on every node
 
-Writes results/figures/network_cytoscape_lists.png and _coxz.png,
-results/tables/biology_network_centrality.csv and the session file
-results/network/network.cys, which reopens everything in Cytoscape.
+Writes results/figures/network_cytoscape_lists and _coxz (PNG and PDF) and the
+session file results/network/network.cys, which reopens everything in
+Cytoscape. It also checks that Cytoscape's network statistics agree with the
+table step 4 wrote (results/tables/biology_network_centrality.csv).
 Cytoscape is left open afterwards so the network can be explored.
 """
 from __future__ import annotations
@@ -58,12 +64,13 @@ def ready() -> bool:
         return False
 
 
-def ensure_cytoscape(launcher: str | None, launch: bool, wait_s: int = 300) -> None:
+def ensure_cytoscape(launcher: str | None, launch: bool, wait_s: int = 300) -> bool:
+    """True once Cytoscape answers. False if it is not running and cannot be
+    started from here."""
     if ready():
-        return
+        return True
     if not launch or not launcher or not Path(launcher).expanduser().exists():
-        raise SystemExit("Cytoscape is not running. Open it and run this again"
-                         + (f" (looked for {launcher})" if launcher else "") + ".")
+        return False
     print(f"  starting Cytoscape ({launcher}); this takes about a minute")
     # Started in its own session so it stays open after this script finishes.
     subprocess.Popen([str(Path(launcher).expanduser())], stdin=subprocess.DEVNULL,
@@ -71,9 +78,9 @@ def ensure_cytoscape(launcher: str | None, launch: bool, wait_s: int = 300) -> N
     t0 = time.time()
     while time.time() - t0 < wait_s:
         if ready():
-            return
+            return True
         time.sleep(5)
-    raise SystemExit(f"Cytoscape did not answer on port 1234 within {wait_s} s")
+    return False
 
 
 def load_graph(path: Path) -> nx.Graph:
@@ -151,6 +158,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--no-launch", action="store_true")
+    ap.add_argument("--require", action="store_true")
     args = ap.parse_args()
     cfg = load_config()
     tables, figures = out_dirs(cfg)
@@ -159,7 +167,14 @@ def main() -> int:
     if not graphml.exists():
         raise SystemExit(f"{graphml} not found: run scripts/04_biology.py first")
 
-    ensure_cytoscape(cfg.get("cytoscape", {}).get("launcher"), not args.no_launch)
+    if not ensure_cytoscape(cfg.get("cytoscape", {}).get("launcher"), not args.no_launch):
+        message = ("Cytoscape is not running and could not be started here. "
+                   "Step 4b is optional: open Cytoscape and run `make cytoscape` to redraw "
+                   "the network figures.")
+        if args.require:
+            raise SystemExit(message)
+        print(f"  SKIPPED. {message}")
+        return 0
     v = p4c.cytoscape_version_info()
     print(f"  Cytoscape {v['cytoscapeVersion']} (automation API {v['apiVersion']})")
 
@@ -182,15 +197,17 @@ def main() -> int:
     p4c.set_node_position_bypass(names, [pos[g][0] for g in names], [pos[g][1] for g in names])
     time.sleep(2)
 
-    # Cytoscape's own topology statistics, written back as a table. They are
-    # computed on the drawn network, which leaves out fragments under 4 genes.
+    # Cytoscape's own network statistics, compared with the table step 4
+    # computed. Two independent programs giving the same numbers is the check.
     p4c.analyze_network(directed=False)
-    node_table = p4c.get_table_columns("node")
-    keep = [c for c in ["name", "group", "module", "cox_z", "Degree", "BetweennessCentrality",
-                        "ClosenessCentrality", "ClusteringCoefficient", "NeighborhoodConnectivity"]
-            if c in node_table.columns]
-    (node_table[keep].sort_values(["Degree", "name"], ascending=[False, True])
-     .to_csv(tables / "biology_network_centrality.csv", index=False))
+    theirs = p4c.get_table_columns("node").set_index("name")
+    ours = pd.read_csv(tables / "biology_network_centrality.csv").set_index("name")
+    measures = ["Degree", "BetweennessCentrality", "ClosenessCentrality",
+                "ClusteringCoefficient", "NeighborhoodConnectivity"]
+    gap = float((ours[measures] - theirs.loc[ours.index, measures].astype(float)).abs().max().max())
+    print(f"  network statistics: largest difference from Cytoscape's own analysis {gap:.1e}")
+    if gap > 1e-9:
+        raise SystemExit("Cytoscape's network statistics disagree with step 4's table")
 
     # Titles, notes and legend are annotations on the Cytoscape canvas.
     xs = [p[0] for p in pos.values()]

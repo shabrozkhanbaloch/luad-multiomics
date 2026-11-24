@@ -5,7 +5,7 @@ SHELL   := /bin/bash
 .SHELLFLAGS := -o pipefail -c
 # logs/ is not in the repository; the steps below write their logs there.
 $(shell mkdir -p logs)
-.PHONY: help setup test quick all cv bootstrap os external biology checks permute report figures cohort cytoscape prep download download-methylation freeze data
+.PHONY: help setup test quick all cv bootstrap os external biology checks permute report figures cohort verify cytoscape prep download download-methylation freeze data
 
 help:
 	@echo "Analysis (in order; 'make all' runs them all: 2 h 52 min with 12 workers, measured 23 Nov 2026)"
@@ -20,6 +20,7 @@ help:
 	@echo "  make report      6. write RESULTS.md from the tables    (seconds)"
 	@echo "  make figures     7. publication figures and source data (20 seconds)"
 	@echo "  make cohort      8. baseline table and flow of the patients analysed (seconds)"
+	@echo "  make verify      9. compare your tables with the published ones (a second)"
 	@echo "A failed step stops the run; continue with the remaining targets, for example"
 	@echo "  make biology cytoscape permute checks report figures cohort"
 	@echo ""
@@ -67,11 +68,13 @@ figures:
 	$(PY) scripts/07_figures.py
 cohort:
 	$(PY) scripts/08_cohort_table.py
+verify:
+	$(PY) scripts/09_verify.py
 
-all: test cv bootstrap os external biology cytoscape permute checks report figures cohort
+all: test cv bootstrap os external biology cytoscape permute checks report cohort figures verify
 
 freeze:
-	$(PY) -m pip freeze > results/pip_freeze.txt
+	$(PY) -m pip freeze > requirements.lock
 
 # ---- the prepared data, as one archive. DATA_URL is the file's address in the
 # data record (see README, "Data"); the checksum is the one in config/.

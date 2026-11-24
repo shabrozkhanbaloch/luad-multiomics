@@ -1,0 +1,4 @@
+list_a,list_b,a_in_network,b_in_network,edges_between,expected,p_fewer,p_more
+model,prognostic,66,149,51,426.707,0.0004997501249375312,1.0
+model,proliferation,66,8,0,23.276,0.001999000499750125,1.0
+prognostic,proliferation,149,8,271,52.4295,1.0,0.0004997501249375312

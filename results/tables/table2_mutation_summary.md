@@ -2,11 +2,13 @@
 
 512 patients · 16949 genes mutated in ≥1 patient · 136,256 non-silent variants
 
+> These are all patients with mutation calls, before the analysis cohort is formed. The analysis itself uses the 440 patients who also have every other block; see cohort_flow.csv and cohort_characteristics.md.
+
 ## Genes altered in ≥5% of the cohort (top 25 of 702)
 
 > Reported for description only. Both the threshold and the top-K cap are refitted inside each training fold, so the modelled set varies by fold.
 
-> **702 genes clear 5%, not the ~26 the protocol assumed.** LUAD's mutation burden (median 4.8 mut/Mb) puts that many binary features at EPV 0.30 against 210 PFI events, and most are length-biased passengers. The block is capped at the 25 most frequent; driver biology enters through the pathway features below.
+> **702 genes clear 5%, not the ~26 the protocol assumed.** LUAD's mutation burden (median 4.8 mut/Mb) puts that many binary features at EPV 0.30 against the 210 PFI events of the source cohort (509 patients, before censoring at 60 months), and most are length-biased passengers. The block is capped at the 25 most frequent; driver biology enters through the pathway features below.
 
 | Gene     |   n altered | % of cohort   |
 |:---------|------------:|:--------------|

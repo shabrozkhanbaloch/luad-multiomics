@@ -187,13 +187,17 @@ def write_table3(tables, df, endp, analysis):
 
     pfi_yrs = (e["pfi_time"] / 365.25)
     with open(tables / "table3_cohort_characteristics.md", "w") as fh:
-        fh.write("# Table 3. Baseline characteristics of the analysis cohort\n\n")
+        fh.write("# Table 3. Baseline characteristics of the source cohort\n\n")
         fh.write(f"TCGA-LUAD, {len(analysis)} patients with clinical covariates "
                  f"and a usable progression-free interval.\n")
         fh.write(f"{int((e['pfi_event'] == 1).sum())} PFI events "
                  f"({(e['pfi_event'] == 1).mean():.1%}); median follow-up "
                  f"{pfi_yrs[e['pfi_event'] == 0].median():.1f} years among the "
                  f"censored.\n\n")
+        fh.write("> This is the source cohort, before the analysis cohort is formed "
+                 "and before follow-up is censored at 60 months. The analysis uses the "
+                 "440 of these patients who have all four blocks (176 events within 60 "
+                 "months); see cohort_flow.csv and cohort_characteristics.md.\n\n")
         fh.write("Descriptive only; no between-group tests are reported, because "
                  "a table of\ncohort characteristics is not a univariable "
                  "prognostic analysis.\n\n")

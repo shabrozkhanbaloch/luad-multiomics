@@ -1,0 +1,8 @@
+check,what,result,verdict,detail
+1 positive control,expression rows belong to the right patients,r = 0.96,PASS,"Y-linked genes against recorded sex: RPS4Y1 +0.96, DDX3Y +0.96, KDM5D +0.94, UTY +0.93, EIF1AY +0.93"
+1 positive control,expression carries known prognostic biology,z = +3.69,PASS,"proliferation metagene, 8 genes, no fitting; Uno's C 0.575"
+2 leakage,corrupting every test row changes nothing that was fitted,identical,PASS,"all four blocks, real data, one fold"
+2 leakage,shuffled outcome scores 0.50,"mean 0.509, range 0.487 to 0.529",PASS,22 arms; furthest from 0.50 is mofa@clinical_only [rsf]
+3 capacity,width the inner loop chose,"50: 52%, 500: 48%",INFO,250 tuned fits with an expression or methylation block
+3 capacity,no fixed width puts omics above clinical,best gain over clinical -0.009,INFO,"mean over 25 folds at widths 50, 500, 2000; see width_sweep.csv"
+4 metric,verdicts agree under Uno's C and Harrell's C,27 of 34 agree; 5 change sign,INFO,differ: clinical+methylation minus clinical [coxnet]; early minus clinical [coxnet]; late@no_rna minus early@no_rna [coxnet]; mofa minus clinical [coxnet]; late@no_rna minus early@no_rna [rsf]; mofa minus clinical [rsf]; mofa@no_rna minus early@no_rna [rsf]

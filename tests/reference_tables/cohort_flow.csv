@@ -1,0 +1,6 @@
+step,patients,excluded
+TCGA-LUAD patients with a usable PFI endpoint,509,0
+with clinical covariates,509,0
+with expression,504,5
+with mutation,496,8
+with methylation,440,56
