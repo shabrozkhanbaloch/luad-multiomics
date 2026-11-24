@@ -16,3 +16,14 @@ keywords:
   - "TCGA"
   - "survival analysis"
   - "MOFA"
+repository-code: "https://github.com/shabrozkhanbaloch/luad-multiomics"
+references:
+  - type: dataset
+    title: "Prepared data for \"LUAD multi-omics integration\": TCGA-LUAD clinical, expression, mutation and methylation blocks, and three GEO validation cohorts"
+    authors:
+      - family-names: "Baloch"
+        given-names: "Shabroz Khan"
+    doi: "10.5281/zenodo.24509337"
+    url: "https://zenodo.org/records/24509337"
+    version: "1.0"
+    date-released: "2026-11-24"

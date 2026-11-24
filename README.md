@@ -6,7 +6,7 @@ An analysis of 440 TCGA-LUAD patients with four data blocks (clinical, expressio
 
 > **The answer.** Inside TCGA, omics adds nothing to clinical covariates. But *how* the blocks are combined matters: a shared latent-factor model (MOFA) beats simple concatenation, barely notices a missing block, and carries over to external cohorts, where integration does improve on the clinical model.
 
-Full write-up with every figure and table: **[results/REPORT.md](results/REPORT.md)**. Raw generated numbers: [RESULTS.md](RESULTS.md).
+Full write-up with every figure and table: **[results/REPORT.md](results/REPORT.md)**. Raw generated numbers: [RESULTS.md](RESULTS.md). Data: [doi:10.5281/zenodo.24509337](https://doi.org/10.5281/zenodo.24509337).
 
 ## Main findings
 
@@ -203,7 +203,7 @@ The analysis reads the 14 files of `data/processed` and `data/interim/endpoints.
    make data
    ```
 
-   The archive is the Zenodo record [zenodo.org/records/24509337](https://zenodo.org/records/24509337) (`luad-multiomics-data-v1.tar`, 1.5 GB). `make data` downloads it, checks it against `config/data_bundle.sha256` and unpacks it into `data/`. To use a copy kept elsewhere: `make data DATA_URL=<address>`.
+   The archive is the Zenodo record [doi:10.5281/zenodo.24509337](https://doi.org/10.5281/zenodo.24509337) (`luad-multiomics-data-v1.tar`, 1.5 GB). `make data` downloads it, checks it against `config/data_bundle.sha256` and unpacks it into `data/`. To use a copy kept elsewhere: `make data DATA_URL=<address>`.
 
 2. **Rebuild from the sources** (R and Python). `make download` and `make download-methylation` fetch about 10 GB of raw files; `make prep` then builds the 15 files in about 6 minutes. The R packages are installed by `Rscript prep/00_setup_r.R`.
 
