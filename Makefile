@@ -39,16 +39,22 @@ help:
 	@echo "  make quick       smoke test of step 1 on real data (1 minute)"
 	@echo ""
 	@echo "Setup and data"
-	@echo "  make setup       create .venv and install requirements"
+	@echo "  make setup       create .venv and install requirements (needs Python 3.13)"
 	@echo "  make data        download the prepared data (1.5 GB) and check it; then 'make all' runs"
 	@echo "  make prep        rebuild data/processed from data/raw (needs R, see README)"
 	@echo "  make download    fetch the raw data except methylation (needs R; skips what is present)"
 	@echo "  make download-methylation   fetch the methylation files and the probe annotation (needs R)"
 
 # ---- setup: run once, first. Creates the Python environment in .venv and
-# installs the packages of requirements.txt. Needs python3 and the internet.
+# installs the packages of requirements.txt. Needs Python 3.13 and the
+# internet. The pinned versions do not install on other Python versions, so
+# setup stops first if the Python it finds is not 3.13. To name a Python:
+#   make setup PYTHON=/path/to/python3.13
+PYTHON ?= $(shell command -v python3.13 2>/dev/null || echo python3)
 setup:
-	python3 -m venv .venv
+	@$(PYTHON) -c 'import sys; v = sys.version_info[:2]; \
+	  sys.exit(0 if v == (3, 13) else "This project needs Python 3.13; $(PYTHON) is %d.%d. Run: make setup PYTHON=/path/to/python3.13" % v)'
+	$(PYTHON) -m venv .venv
 	$(PY) -m pip install -q --upgrade pip
 	$(PY) -m pip install -q -r requirements.txt
 

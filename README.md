@@ -60,6 +60,7 @@ You need Python 3.13, `make`, about 4 GB of free disk and about 3 hours. It was 
 
 ```bash
 make setup     # once: create .venv and install the pinned packages (about a minute)
+               # if your python3 is not 3.13: make setup PYTHON=/path/to/python3.13
 make data      # once: download the prepared data from Zenodo and check it (1.5 GB)
 make test      # 10 seconds, synthetic data: is the installation sound?
 make quick     # 1 minute, real data, tiny settings: does the pipeline run here?
