@@ -315,3 +315,36 @@ biology:
 # Java 17 that ships beside it.
 cytoscape:
   launcher: ~/.local/bin/cytoscape
+
+# ---------------- Added after the first run ----------------
+# Everything above this line was fixed before the analysis was run. The two
+# items below were added on 24 November 2026, after the results were known.
+# They describe and explore; they add no contrast and change no number above.
+# README.md, section "Added after the first run", records why.
+added_after_first_run:
+  # Step 10: Kaplan-Meier curves of patients grouped by predicted risk.
+  survival_curves:
+    arms: [clinical, mofa]       # the baseline, and the one arm above it
+    groups: 3                    # thirds: low, middle and high predicted risk
+    months: [36, 60]             # time points at which the event-free share is reported
+  # Step 11: what MOFA factor 2 is. Small hand-picked marker sets for broad
+  # biological programmes; a patient's score is the mean of the standardised
+  # expression of the set's genes. They are indicators, not validated
+  # signatures.
+  factor_biology:
+    factor: factor2              # the factor associated with the endpoint (|Cox z| > 2)
+    driver_genes: [TP53, KRAS, EGFR, STK11, KEAP1]
+    signatures:
+      Cell cycle and proliferation: [MKI67, TOP2A, PCNA, MCM2, MCM5, CCNB1, CCNE1, CDK1, AURKA]
+      DNA damage repair:            [BRCA1, BRCA2, RAD51, ATM, ATR, CHEK1, CHEK2, MRE11, MSH2, MLH1]
+      Hypoxia:                      [HIF1A, VEGFA, CA9, SLC2A1, LDHA, PGK1, ENO1, BNIP3]
+      Glycolysis:                   [HK2, PFKP, ALDOA, GAPDH, PGK1, ENO1, PKM, LDHA, SLC2A1]
+      EMT and invasion:             [VIM, ZEB1, ZEB2, SNAI1, SNAI2, TWIST1, FN1, ITGA5, MMP2, MMP9]
+      T cells and interferon:       [CD3D, CD3E, CD8A, CD8B, GZMB, PRF1, IFNG, CXCL9, CXCL10, STAT1, IRF1]
+      B cells:                      [MS4A1, CD79A, CD79B, BANK1, CD19, BLK, IGHM, IGKC]
+      Macrophages:                  [LYZ, CD68, CSF1R, AIF1, C1QA, C1QB, LST1, FCGR3A]
+      Fibroblasts:                  [COL1A1, COL1A2, COL3A1, DCN, LUM, FAP, ACTA2, TAGLN]
+      Endothelium:                  [PECAM1, VWF, KDR, FLT1, ENG, ESAM, VEGFA, ANGPT2]
+      Lung differentiation:         [NKX2-1, SFTPB, SFTPC, SFTPA1, NAPSA, LAMP3, SFTPD, ABCA3]
+      KRAS signalling:              [DUSP6, ETV4, ETV5, SPRY2, SPRY4, FOSL1, PLAUR, IL6]
+      EGFR and ERBB signalling:     [EGFR, ERBB2, ERBB3, AREG, EREG, TGFA, GRB7, MUC1]

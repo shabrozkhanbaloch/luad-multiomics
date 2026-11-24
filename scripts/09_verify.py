@@ -65,6 +65,13 @@ TABLES = [
     "cv_pfi_permuted_summary.csv",   # shuffled-outcome check
     "checks.csv",                    # the robustness checks
     "width_sweep.csv",
+    "survival_groups_pfi.csv",       # added after the first run: risk groups (step 10)
+    "survival_groups_os.csv",
+    "survival_curves_pfi.csv",
+    "survival_curves_os.csv",
+    "biology_factor_scores.csv",     # each patient's value on each MOFA factor (step 4)
+    "biology_factor_associations.csv",  # added after the first run: what factor 2 follows (step 11)
+    "biology_factor_outcome.csv",
 ]
 
 TOLERANCE = 1e-6

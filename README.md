@@ -20,7 +20,7 @@ Primary endpoint: progression-free interval, 176 events. Metric: Uno's C (0.5 is
 | 4 | **MOFA is robust to a missing block.** | 0.607 to 0.611 with any one omics block removed at test time, against 0.611 with none removed. |
 | 5 | **Integration helps in external cohorts.** | Against the clinical model in three GEO cohorts: late fusion better in 6 of 10 cells, MOFA in 5 of 10, neither ever worse. |
 | 6 | **Prognostic genes and model genes are different biology.** | Genes prognostic alone are cell-cycle genes (CDK1, CCNA2, TOP2A). The Cox model keeps surfactant and mucin genes (SFTPB, NKX2-1, MUC5B). 51 protein interactions between the two lists against 427 expected. |
-| 7 | **One latent factor carries the signal.** | MOFA factor 2: Cox z = −3.3; tracks tumour mutation burden (r = −0.57). |
+| 7 | **One latent factor carries the signal, and it is a proliferation axis.** | MOFA factor 2: Cox z = −3.3. It follows a cell-cycle programme (r = −0.82) with lung differentiation at the other end; with proliferation removed, z = −0.7. The reading of the factor was added after the first run. |
 
 **Not shown, and not claimed:** that MOFA beats clinical covariates alone. It is the only method above the clinical line (0.611 against 0.598), but the difference is +0.012 (−0.003, 0.028).
 
@@ -110,8 +110,25 @@ Each step is one script in `scripts/`, numbered in the order they run:
 | 7 | `07_figures.py` | The publication figures in `results/figures/` (`fig*.png`, `fig*.pdf`, the workflow as SVG and PDF, the cohort flow diagram) used by `results/REPORT.md`, and `results/source_data/`: the numbers behind every panel, one CSV per panel |
 | 8 | `08_cohort_table.py` | `cohort_characteristics.csv` and `.md`: baseline characteristics of the patients analysed; `cohort_flow.csv`: how 509 patients become 440 |
 | 9 | `09_verify.py` | Nothing: compares the tables of this run with `tests/reference_tables/` and prints PASS or the differences |
+| 10 | `10_survival_curves.py` | Added after the first run. `survival_curves_<endpoint>.csv`, `survival_groups_<endpoint>.csv`: Kaplan-Meier curves of patients in thirds of out-of-fold predicted risk |
+| 11 | `11_factor_biology.py` | Added after the first run. `biology_factor_associations.csv`, `biology_factor_outcome.csv`: what MOFA factor 2 follows, and whether its link to outcome survives removing a simpler variable |
 
 `results/REPORT.md` is the one hand-written results document. Its numbers were checked against the tables of the 22 November 2026 run, which the 23 November rerun reproduced; after a rerun, regenerate `RESULTS.md` and the figures, then update the report's text.
+
+## Added after the first run
+
+The plan in `config/config.yaml` was fixed before anything was run, and the seven findings above come from it. Two things were added on 24 November 2026, after the results were known. They are kept apart, in the configuration under `added_after_first_run` and in section 10 of the report, so that a reader can tell planned from unplanned.
+
+| Addition | What it is | Why it was added | What it does not do |
+|---|---|---|---|
+| Step 10, survival curves | Kaplan-Meier curves of patients in thirds of out-of-fold predicted risk, for the clinical model and MOFA | A concordance of 0.60 is hard to picture; the curves show it | It compares no arms and adds no contrast. It is a picture of numbers already reported |
+| Step 11, what factor 2 is | Correlation of the outcome-linked MOFA factor with marker-gene programmes, driver mutations and clinical covariates | "One factor tracks outcome" said nothing about what the factor is | It is exploratory. Programmes and factor come from the same expression data, so it describes the factor and does not confirm it independently |
+
+![What MOFA factor 2 is](results/figures/fig10_factor_biology.png)
+
+*Factor 2 follows proliferation at one end and lung differentiation at the other. Its link to progression disappears when proliferation is removed and stays when mutation burden is removed.*
+
+Nothing else was added: the 34 contrasts, the models, the blocks and the checks are the ones declared in advance.
 
 ## Design
 
@@ -154,7 +171,7 @@ src/luad/              the library
   bootstrap.py         paired patient-level bootstrap
   external.py          stack TCGA and a GEO cohort into one train/test problem
   biology.py           Cox scores, STRING, network modules, export
-scripts/               the nine steps
+scripts/               the eleven steps
 tests/                 unit tests on a synthetic cohort; reference_tables/ for `make verify`
 prep/                  rebuild data/processed from raw downloads (R and Python)
 results/
@@ -195,5 +212,7 @@ The analysis reads the 14 files of `data/processed` and `data/interim/endpoints.
    What was not tested: the downloads themselves. They were not repeated, and the sources change with new data releases, so a download made today may differ from the one made in August 2026. For reproducing the reported numbers exactly, use route 1.
 
 ## Relation to my MSc dissertation
+
+The dissertation and this project reach the same main answer on different patients with different designs; the numbers are set side by side in [section 11 of the report](results/REPORT.md#11-relation-to-my-msc-dissertation).
 
 This project is a redesign of the question I studied in my MSc Bioinformatics dissertation (University of West London, 2026), with one plan made in advance. It is not the dissertation itself: the cohort, the methods and the numbers here are different. It reuses the dissertation's processed data and three ideas that were tested there: fold-internal transforms, the patient-level paired bootstrap, and the leakage checks. The lncRNA, pathway-score, rank-transform, neural-network and TabPFN experiments were not carried over; the dissertation found that none of them changed the answer.

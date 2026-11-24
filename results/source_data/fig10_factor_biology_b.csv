@@ -1,0 +1,7 @@
+after_removing,share_of_factor_explained,cox_z
+nothing,0.0,-3.336296601823351
+Cell cycle and proliferation,0.6722592615025891,-0.7154304391253061
+Mutation burden,0.3214084039114613,-3.7769532630846023
+Stage,0.02829408154410884,-2.5090831854514652
+All clinical covariates,0.14672764338147126,-2.60790932397526
+"Proliferation, mutation burden and clinical covariates",0.7374776825613214,-0.7985632647869629

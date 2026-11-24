@@ -315,6 +315,56 @@ def section_checks(tables: Path) -> str:
     return "\n".join(out)
 
 
+def section_added(tables: Path, cfg: dict, endpoint: str) -> str:
+    """The section for the two steps added after the first run (steps 10 and 11).
+
+    Arguments
+        tables    the folder of result tables
+        cfg       the configuration, for the factor's name
+        endpoint  the primary endpoint, lower case
+
+    Returns
+        The markdown text of the section; a part whose step has not been run
+        says so.
+    """
+    out = ["_Steps 10 and 11 are not part of the plan fixed before the analysis. They were added "
+           "afterwards, describe and explore, and add no contrast._\n",
+           f"**Patients grouped by predicted risk, {endpoint.upper()}** (thirds of the out-of-fold "
+           "risk; event-free share from Kaplan-Meier curves, with 95% intervals)\n"]
+    groups = read(tables, f"survival_groups_{endpoint}.csv")
+    if groups is None:
+        out.append(NOT_RUN)
+    else:
+        shown = groups.assign(model=groups["model"].map(MODEL_LABELS))
+        for column in [c for c in shown.columns if c.startswith("event_free_") and not c.endswith(("low", "high"))]:
+            shown[column] = [ci(v, lo, hi) for v, lo, hi in
+                             zip(shown[column], shown[f"{column}_low"], shown[f"{column}_high"])]
+        shown = shown.drop(columns=[c for c in shown.columns if c.endswith(("_low", "_high"))])
+        shown["logrank_p"] = shown["logrank_p"].map(lambda p: f"{p:.2g}")
+        # Every cell is already text; `disable_numparse` stops the table writer
+        # from reading "5.3e-06" back as a number and printing it as 0.000.
+        out += [shown.drop(columns="logrank_chi2").to_markdown(index=False, disable_numparse=True), ""]
+
+    factor = cfg["added_after_first_run"]["factor_biology"]["factor"]
+    out.append(f"**What {factor} follows** (Pearson correlation with each programme, mutation and "
+               "patient characteristic; FDR by Benjamini-Hochberg)\n")
+    associations = read(tables, "biology_factor_associations.csv")
+    if associations is None:
+        out.append(NOT_RUN)
+    else:
+        shown = associations[["feature", "kind", "n", "r", "ci_low", "ci_high", "fdr"]].copy()
+        for column in ("r", "ci_low", "ci_high"):
+            shown[column] = shown[column].map(lambda v: f"{v:+.3f}")
+        shown["fdr"] = shown["fdr"].map(lambda p: f"{p:.2g}")
+        out += [shown.to_markdown(index=False, disable_numparse=True), ""]
+
+    out.append(f"**Association of {factor} with {endpoint.upper()} after removing what a simpler "
+               "variable explains**\n")
+    outcome = read(tables, "biology_factor_outcome.csv")
+    out += [NOT_RUN] if outcome is None else [md_table(outcome, "+.3f"), ""]
+    return "\n".join(out)
+
+
 def main() -> int:
     """Build the report from the tables and write RESULTS.md.
 
@@ -352,6 +402,7 @@ def main() -> int:
         "## 3. External validation\n", section_external(tables),
         "## 4. Biology\n", section_biology(tables),
         "## 5. Checks\n", section_checks(tables),
+        "## 6. Added after the first run\n", section_added(tables, cfg, primary),
     ]
 
     # ---- Write the report ----

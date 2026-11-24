@@ -15,8 +15,10 @@ This report explains the results. The complete numbers, generated straight from 
 7. [Sensitivity: overall survival](#7-sensitivity-overall-survival)
 8. [Part 3. Biology behind the models](#8-part-3-biology-behind-the-models)
 9. [Robustness checks](#9-robustness-checks)
-10. [Limitations](#10-limitations)
-11. [Where everything is](#11-where-everything-is)
+10. [Added after the first run](#10-added-after-the-first-run)
+11. [Relation to my MSc dissertation](#11-relation-to-my-msc-dissertation)
+12. [Limitations](#12-limitations)
+13. [Where everything is](#13-where-everything-is)
 
 ## 1. Summary
 
@@ -32,7 +34,7 @@ This report explains the results. The complete numbers, generated straight from 
 | 4 | MOFA is the only method above clinical alone, but the gap is not resolved | +0.012 (−0.003, 0.028) | Not established |
 | 5 | In external cohorts, integration does help | Late fusion beats the clinical model in 6 of 10 cohort-endpoint-model cells, MOFA in 5 of 10; neither is ever worse | Supported, with a caveat about the weaker external clinical model |
 | 6 | Prognostic genes and model genes are different biology | Prognostic genes: cell cycle. Genes kept by the Cox model: surfactant and mucin. 51 protein interactions between the lists against 427 expected | Direction firm, size not |
-| 7 | One latent factor tracks outcome | MOFA factor 2: Cox z = −3.3, correlation with mutation burden −0.57 | Nominal, whole-cohort fit |
+| 7 | One latent factor tracks outcome, and it is a proliferation axis | MOFA factor 2: Cox z = −3.3. Correlation with a cell-cycle programme −0.82; with that programme removed, z = −0.7 | Nominal, whole-cohort fit. The interpretation was added after the first run (section 10.2) |
 
 **In one sentence.** Adding omics to clinical data does not improve prediction of progression in TCGA-LUAD, but if omics is used, a shared latent-factor model (MOFA) is the safer way to combine it: it beats simple concatenation, loses almost nothing when a block is absent, and transfers to external cohorts.
 
@@ -320,7 +322,88 @@ The same network coloured by Cox z: [figures/network_cytoscape_coxz.png](figures
 - **The signal is there, the model just does not need it.** An eight-gene proliferation score with no fitting reaches 0.575, above the tuned expression-only models (0.502 and 0.546). Expression is prognostic; it is not prognostic beyond stage.
 - **Metric dependence is real in places.** Seven verdicts differ between the two metrics, including MOFA − clinical, which is resolved as a gain under Harrell's C with both models but not under Uno's C. The pre-declared primary metric is Uno's C.
 
-## 10. Limitations
+## 10. Added after the first run
+
+**Everything in sections 1 to 9 follows the plan that was fixed in `config/config.yaml` before the analysis was run. This section does not.** The two analyses below were added on 24 November 2026, after the results were known. They describe and explore. They add no contrast, change no number above, and no claim in the summary about prediction rests on them. They are in the configuration under `added_after_first_run`, are run by `make survival` and `make factor`, and are checked by `make verify` like every other table.
+
+### 10.1 What the discrimination looks like: survival by predicted risk
+
+A concordance of 0.60 is hard to picture. Here the 440 patients are split into three equal groups by the risk a model gave them, and a Kaplan-Meier curve is drawn for each group. Every risk is out-of-fold: it comes from a model that had not seen the patient. A patient is tested five times in the repeated cross-validation, so the patient's rank inside each test fold is averaged over the five.
+
+![Survival by predicted risk, PFI](figures/fig9_survival_pfi.png)
+
+**Figure 10. Progression-free survival of patients grouped by out-of-fold predicted risk.** (a, b) Penalised Cox with the clinical model and with MOFA. (c, d) Random survival forest. n = 440 patients, 176 events within 60 months, in thirds of 147, 147 and 146 patients: low (solid), middle (dashed) and high (dotted) predicted risk. Curves are Kaplan-Meier estimates; the rows under each time axis give the patients still at risk. P is from a log-rank test across the three groups and is a description, not a planned test. Added after the first run. Source data: `source_data/fig9_survival_pfi_abcd.csv`, `source_data/fig9_survival_pfi_summary.csv`.
+
+| Model | Arm | Low risk | Middle | High risk |
+|:--|:--|:--|:--|:--|
+| Penalised Cox | Clinical | 0.55 (0.44, 0.65) | 0.61 (0.51, 0.70) | 0.32 (0.22, 0.42) |
+| Penalised Cox | MOFA | 0.68 (0.57, 0.77) | 0.45 (0.35, 0.55) | 0.35 (0.25, 0.45) |
+| Random survival forest | Clinical | 0.61 (0.49, 0.71) | 0.51 (0.41, 0.61) | 0.36 (0.27, 0.46) |
+| Random survival forest | MOFA | 0.65 (0.53, 0.74) | 0.50 (0.40, 0.60) | 0.34 (0.24, 0.44) |
+
+*Share of patients progression-free at 36 months, with 95% intervals.*
+
+What it shows:
+
+- **Every model separates the high-risk third from the rest.** About a third of the high-risk group is progression-free at 36 months, against about 60% of the low-risk group.
+- **The clinical Cox model does not separate its low and middle thirds**: the middle third does slightly better than the low third (0.61 against 0.55). With MOFA under Cox the three groups are in order.
+- **This is not evidence that MOFA is better than the clinical model.** The intervals of neighbouring groups overlap, no test here compares two arms, and the planned comparison says the difference is not resolved (+0.012, section 5). The figure is a picture of the concordances already reported, not a new result.
+
+The same figure for overall survival: [figures/fig9_survival_os.png](figures/fig9_survival_os.png).
+
+### 10.2 What MOFA factor 2 is
+
+Section 8.1 found one factor associated with progression, factor 2, and noted that it follows mutation burden. A factor is one number per patient. This step asks what that number means, using short lists of marker genes for broad biological programmes (they are in the configuration), five driver genes, mutation burden and the clinical covariates.
+
+![What factor 2 is](figures/fig10_factor_biology.png)
+
+**Figure 11. What MOFA factor 2 follows, and why it is linked to outcome.** (a) Pearson correlation of factor 2 with 13 expression programmes, 6 mutation features and 5 patient characteristics, with 95% intervals; n = 440, fewer where a characteristic is missing. A programme score is the mean standardised expression of 8 to 11 marker genes. Filled markers pass a false-discovery rate of 0.05 over the 24 correlations. (b) Association of factor 2 with progression (Cox score z) alone, and after the part of the factor that a simpler variable explains by linear regression has been removed; bars beyond |z| = 2 are blue. The factor is fitted on all patients. Added after the first run; exploratory. Source data: `source_data/fig10_factor_biology_a.csv`, `source_data/fig10_factor_biology_b.csv`.
+
+| Factor 2 after removing | Share of the factor explained | Cox z with progression |
+|:--|:--|:--|
+| Nothing | 0% | −3.34 |
+| Cell-cycle and proliferation programme | 67% | −0.72 |
+| Mutation burden | 32% | −3.78 |
+| Stage | 3% | −2.51 |
+| All clinical covariates | 15% | −2.61 |
+| Proliferation, mutation burden and clinical covariates | 74% | −0.80 |
+
+What it shows:
+
+- **Factor 2 is a proliferation axis.** Its strongest correlation is with the cell-cycle programme (r = −0.82), then DNA damage repair (−0.71). At the other end is lung differentiation, the surfactant genes (+0.64). A high value of the factor means a differentiated, slowly dividing tumour; a low value means a proliferating one. Low values also go with TP53 mutation (−0.36) and a higher mutation burden (−0.57).
+- **Its link to outcome is proliferation.** Remove what the nine cell-cycle genes explain and the association with progression falls from z = −3.3 to −0.7. Remove mutation burden instead and it does not fall at all (−3.8). So the correlation with mutation burden noted in section 8.1 is a companion of the factor, not the reason it is prognostic.
+- **It is only partly the clinical covariates.** With stage, age, sex and smoking removed the factor is still associated with progression (z = −2.6).
+- **This joins the two gene lists of section 8.2.** Genes that are prognostic on their own are cell-cycle genes; genes the Cox model keeps are surfactant and mucin genes. Those are the two ends of this one axis. The lists share few genes and few protein interactions, but they appear to measure the same thing from opposite sides. This reading is consistent with the data here and was not tested.
+
+Read these before using it:
+
+- The programme scores and the factor are both computed from the same expression data, so this says what the factor is. It is not an independent confirmation.
+- The marker lists are short and hand-picked. They indicate a programme; they are not validated signatures.
+- "Removing" a variable is a straight-line adjustment, and the z values are not corrected for the number of variables tried.
+
+## 11. Relation to my MSc dissertation
+
+This project asks the question of my MSc dissertation again with a different design (University of West London, 2026; the dissertation and its code are not public). The two share the source data and three ideas (fold-internal transforms, the paired patient-level bootstrap, the leakage checks). They do not share patients exactly, models, contrasts or code for the analysis. That makes their agreement informative: it is closer to a replication than to a rerun.
+
+| | Dissertation | This project |
+|:--|:--|:--|
+| Patients, progression events | 496, 197 | 440, 176 |
+| Blocks | Clinical, expression, mutation | Clinical, expression, mutation, methylation |
+| Model families | Three | Two |
+| Integration methods | Imputation, late fusion and others, six strategies | Early fusion, late fusion, MOFA |
+| Comparisons | 106, of which 4 were supported | 34, fixed in advance |
+| Clinical covariates alone, Uno's C | 0.586 | 0.598 (0.562, 0.638) |
+| All blocks against clinical alone, penalised Cox | −0.033 (−0.056, −0.009) | −0.023 (−0.045, −0.002) |
+| The same, random survival forest | −0.031 (−0.075, +0.013) | −0.031 (−0.080, +0.018) |
+| Late fusion against the simple alternative, forest | +0.038 (0.007, 0.070), against mean imputation with a block missing | +0.030 (0.002, 0.060), against early fusion |
+
+- **The main answer is the same in both.** Adding every omics block to the clinical covariates lowers concordance by about 0.03, resolved under penalised Cox and in the same direction under the forest.
+- **So is the one positive finding about strategy.** Keeping one model per block and combining their risks beats pushing everything through one model, under the forest, by about 0.03.
+- **What is new here:** MOFA, the methylation block inside the main analysis, three external cohorts, and a plan fixed before the run in place of 106 comparisons.
+
+The numbers of the dissertation are quoted from it and cannot be checked from this repository.
+
+## 12. Limitations
 
 1. **Effects are small and the cohort is limited.** Differences are 0.01 to 0.04 in concordance, with 176 events. "MOFA beats early fusion" is supported. "MOFA beats clinical" is not.
 2. **One run, one seed.** The MOFA advantage has not been repeated with a second cross-validation seed.
@@ -331,8 +414,9 @@ The same network coloured by Cox z: [figures/network_cytoscape_coxz.png](figures
 7. **MOFA uses a Gaussian likelihood for every block**, including the 0/1 mutation features. This keeps the projection of a new patient in closed form but is an approximation.
 8. **Patients without all four blocks are excluded.** 56 patients who lack only methylation are left out; MOFA could train on them.
 9. **No calibration or decision-curve analysis.** Only discrimination is reported.
+10. **Section 10 was added after the results were known.** The survival curves are descriptive and the reading of factor 2 is exploratory; neither is one of the planned comparisons.
 
-## 11. Where everything is
+## 13. Where everything is
 
 | What | Where |
 |:--|:--|
@@ -344,6 +428,7 @@ The same network coloured by Cox z: [figures/network_cytoscape_coxz.png](figures
 | Fold-level predictions | `tables/cv_pfi_predictions.parquet`, `tables/cv_os_predictions.parquet` |
 | External validation | `tables/external_arms.csv`, `tables/external_contrasts.csv` |
 | Biology | `tables/biology_*.csv` |
+| Added after the first run | `tables/survival_groups_*.csv`, `tables/survival_curves_*.csv`, `tables/biology_factor_associations.csv`, `tables/biology_factor_outcome.csv` |
 | Checks | `tables/checks.csv`, `tables/width_sweep.csv`, `tables/cv_pfi_permuted_summary.csv` |
 | Network | `network/network.cys` (Cytoscape session), `network/network.graphml`, node and edge tables |
 | The plan | `../config/config.yaml` |
@@ -361,3 +446,5 @@ The same network coloured by Cox z: [figures/network_cytoscape_coxz.png](figures
 | 9. Checks | `fig8_checks` | 9 |
 | Overall survival versions | `fig2_prediction_os`, `fig3_integration_os`, `figS_contrasts_os` | 7 |
 | Cohort flow | `figS_cohort_flow` | 3 |
+| 10. Survival by predicted risk | `fig9_survival_pfi`, `fig9_survival_os` | 10.1 |
+| 11. What factor 2 is | `fig10_factor_biology` | 10.2 |

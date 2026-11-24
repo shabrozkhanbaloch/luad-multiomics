@@ -403,3 +403,64 @@ Figures drawn by Cytoscape: `results/figures/network_cytoscape_lists.png` (colou
 | coxnet  | early        | 2000 |  +0.564 |           -0.034 |            +0.055 |
 | rsf     | clinical+rna | 2000 |  +0.566 |           -0.028 |            +0.053 |
 | rsf     | early        | 2000 |  +0.554 |           -0.040 |            +0.056 |
+
+## 6. Added after the first run
+
+_Steps 10 and 11 are not part of the plan fixed before the analysis. They were added afterwards, describe and explore, and add no contrast._
+
+**Patients grouped by predicted risk, PFI** (thirds of the out-of-fold risk; event-free share from Kaplan-Meier curves, with 95% intervals)
+
+| model                  | arm      | group   | patients   | events   | event_free_36m       | event_free_60m       | logrank_p   |
+|:-----------------------|:---------|:--------|:-----------|:---------|:---------------------|:---------------------|:------------|
+| Penalised Cox          | clinical | low     | 147        | 51       | 0.555 (0.443, 0.653) | 0.387 (0.253, 0.518) | 5.3e-06     |
+| Penalised Cox          | clinical | middle  | 147        | 48       | 0.614 (0.506, 0.705) | 0.466 (0.338, 0.584) | 5.3e-06     |
+| Penalised Cox          | clinical | high    | 146        | 77       | 0.316 (0.221, 0.415) | 0.271 (0.175, 0.376) | 5.3e-06     |
+| Penalised Cox          | mofa     | low     | 147        | 41       | 0.684 (0.574, 0.772) | 0.441 (0.292, 0.581) | 5.9e-06     |
+| Penalised Cox          | mofa     | middle  | 147        | 62       | 0.454 (0.351, 0.552) | 0.370 (0.260, 0.480) | 5.9e-06     |
+| Penalised Cox          | mofa     | high    | 146        | 73       | 0.352 (0.252, 0.452) | 0.301 (0.198, 0.411) | 5.9e-06     |
+| Random survival forest | clinical | low     | 147        | 44       | 0.608 (0.489, 0.707) | 0.421 (0.281, 0.556) | 0.00061     |
+| Random survival forest | clinical | middle  | 147        | 60       | 0.514 (0.410, 0.609) | 0.392 (0.278, 0.505) | 0.00061     |
+| Random survival forest | clinical | high    | 146        | 72       | 0.365 (0.266, 0.464) | 0.309 (0.203, 0.422) | 0.00061     |
+| Random survival forest | mofa     | low     | 147        | 42       | 0.650 (0.534, 0.745) | 0.377 (0.229, 0.525) | 6.1e-06     |
+| Random survival forest | mofa     | middle  | 147        | 59       | 0.502 (0.398, 0.597) | 0.417 (0.308, 0.521) | 6.1e-06     |
+| Random survival forest | mofa     | high    | 146        | 75       | 0.341 (0.244, 0.440) | 0.310 (0.207, 0.418) | 6.1e-06     |
+
+**What factor2 follows** (Pearson correlation with each programme, mutation and patient characteristic; FDR by Benjamini-Hochberg)
+
+| feature                      | kind      | n   | r      | ci_low   | ci_high   | fdr      |
+|:-----------------------------|:----------|:----|:-------|:---------|:----------|:---------|
+| Cell cycle and proliferation | programme | 440 | -0.820 | -0.848   | -0.787    | 8.9e-107 |
+| DNA damage repair            | programme | 440 | -0.711 | -0.754   | -0.661    | 7.2e-68  |
+| Lung differentiation         | programme | 440 | +0.642 | +0.583   | +0.694    | 1.4e-51  |
+| Mutation burden              | mutation  | 440 | -0.567 | -0.627   | -0.500    | 5.3e-38  |
+| Glycolysis                   | programme | 440 | -0.530 | -0.594   | -0.460    | 1.3e-32  |
+| Hypoxia                      | programme | 440 | -0.463 | -0.534   | -0.387    | 3.3e-24  |
+| Macrophages                  | programme | 440 | +0.408 | +0.327   | +0.483    | 1.4e-18  |
+| TP53 mutated                 | mutation  | 440 | -0.364 | -0.442   | -0.280    | 9.4e-15  |
+| EGFR and ERBB signalling     | programme | 440 | +0.356 | +0.272   | +0.435    | 3.3e-14  |
+| B cells                      | programme | 440 | +0.335 | +0.250   | +0.416    | 1.2e-12  |
+| Endothelium                  | programme | 440 | +0.311 | +0.224   | +0.393    | 5.9e-11  |
+| KRAS signalling              | programme | 440 | +0.290 | +0.202   | +0.374    | 1.1e-09  |
+| KEAP1 mutated                | mutation  | 440 | -0.280 | -0.364   | -0.191    | 4.4e-09  |
+| Age                          | clinical  | 430 | +0.238 | +0.146   | +0.325    | 1.1e-06  |
+| Pack-years                   | clinical  | 362 | -0.222 | -0.317   | -0.121    | 3.3e-05  |
+| Ever smoker                  | clinical  | 426 | -0.192 | -0.282   | -0.099    | 0.0001   |
+| Male sex                     | clinical  | 440 | -0.175 | -0.264   | -0.083    | 0.00032  |
+| EGFR mutated                 | mutation  | 440 | +0.174 | +0.082   | +0.263    | 0.00033  |
+| Stage                        | clinical  | 436 | -0.167 | -0.257   | -0.074    | 0.0006   |
+| Fibroblasts                  | programme | 440 | +0.107 | +0.014   | +0.199    | 0.03     |
+| STK11 mutated                | mutation  | 440 | -0.105 | -0.197   | -0.012    | 0.031    |
+| T cells and interferon       | programme | 440 | -0.031 | -0.124   | +0.063    | 0.57     |
+| KRAS mutated                 | mutation  | 440 | +0.023 | -0.071   | +0.116    | 0.66     |
+| EMT and invasion             | programme | 440 | +0.013 | -0.080   | +0.107    | 0.78     |
+
+**Association of factor2 with PFI after removing what a simpler variable explains**
+
+| after_removing                                         |   share_of_factor_explained |   cox_z |
+|:-------------------------------------------------------|----------------------------:|--------:|
+| nothing                                                |                      +0.000 |  -3.336 |
+| Cell cycle and proliferation                           |                      +0.672 |  -0.715 |
+| Mutation burden                                        |                      +0.321 |  -3.777 |
+| Stage                                                  |                      +0.028 |  -2.509 |
+| All clinical covariates                                |                      +0.147 |  -2.608 |
+| Proliferation, mutation burden and clinical covariates |                      +0.737 |  -0.799 |

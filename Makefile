@@ -11,7 +11,7 @@ SHELL   := /bin/bash
 .SHELLFLAGS := -o pipefail -c
 # logs/ is not in the repository; the steps below write their logs there.
 $(shell mkdir -p logs)
-.PHONY: help setup test quick all cv bootstrap os external biology checks permute report figures cohort verify cytoscape prep download download-methylation freeze data
+.PHONY: help setup test quick all cv bootstrap os external biology checks permute report figures cohort verify survival factor cytoscape prep download download-methylation freeze data
 
 # ---- help: print the list of targets with what they do and how long they
 # take. It runs nothing. Start here.
@@ -29,6 +29,8 @@ help:
 	@echo "  make figures     7. publication figures and source data (20 seconds)"
 	@echo "  make cohort      8. baseline table and flow of the patients analysed (seconds)"
 	@echo "  make verify      9. compare your tables with the published ones (a second)"
+	@echo "  make survival   10. survival curves by predicted risk; added after the first run (seconds)"
+	@echo "  make factor     11. what MOFA factor 2 is; added after the first run (seconds)"
 	@echo "A failed step stops the run; continue with the remaining targets, for example"
 	@echo "  make biology cytoscape permute checks report figures cohort"
 	@echo ""
@@ -87,11 +89,18 @@ figures:
 	$(PY) scripts/07_figures.py
 cohort:
 	$(PY) scripts/08_cohort_table.py
+# Steps 10 and 11 were added after the first run (see README). They read the
+# predictions of step 1 and the factor scores of step 4, and fit nothing.
+survival:
+	$(PY) scripts/10_survival_curves.py
+	$(PY) scripts/10_survival_curves.py --endpoint os
+factor:
+	$(PY) scripts/11_factor_biology.py
 verify:
 	$(PY) scripts/09_verify.py
 
 # ---- all: the whole analysis, in order. A step that fails stops the run.
-all: test cv bootstrap os external biology cytoscape permute checks report cohort figures verify
+all: test cv bootstrap os external biology cytoscape permute checks survival factor report cohort figures verify
 
 # ---- freeze: write the exact versions of the installed Python packages to
 # requirements.lock. Run it after a full run to record the environment.

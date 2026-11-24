@@ -1001,6 +1001,144 @@ def fig_checks(tables, figures, endpoint: str) -> None:
     save(fig, figures, "fig8_checks")
 
 
+# ---------------------------------------------------------------- added after the first run
+
+# Three ordered groups get three steps of one colour, light to dark, and three
+# line styles, so the groups can be told apart without colour.
+RISK_GROUPS = {"low": ("#6da7ec", "-"), "middle": ("#256abf", (0, (5, 2))), "high": ("#0d366b", (0, (1, 1.5)))}
+
+
+def fig_survival(tables, figures, cfg, endpoint: str) -> None:
+    """Figure 10 of results/REPORT.md: survival of patients grouped by predicted risk.
+
+    One panel per model family (rows) and arm (columns). In each panel the
+    patients are split into thirds by their out-of-fold risk and a
+    Kaplan-Meier curve is drawn for each third, with the number of patients
+    still at risk printed below the time axis. Drawn from the tables step 10
+    wrote. This figure was added after the first run and is descriptive.
+    """
+    curves = pd.read_csv(tables / f"survival_curves_{endpoint}.csv")
+    groups = pd.read_csv(tables / f"survival_groups_{endpoint}.csv")
+    arms = cfg["added_after_first_run"]["survival_curves"]["arms"]
+    horizon = int(cfg["endpoint"]["admin_censor_months"])
+    ticks = list(range(0, horizon + 1, 12))
+    outcome = "Progression-free" if endpoint == "pfi" else "Alive"
+
+    fig, axes = plt.subplots(len(MODEL_LABELS), len(arms), figsize=(W, 5.9), sharex=True, sharey=True)
+    for i, (model, model_label) in enumerate(MODEL_LABELS.items()):
+        for j, arm in enumerate(arms):
+            ax = axes[i, j]
+            ax.grid(axis="y"); ax.grid(axis="x", visible=False)
+            curve_ends = {}
+            for k, (name, (colour, line_style)) in enumerate(RISK_GROUPS.items()):
+                curve = curves[(curves["model"] == model) & (curves["arm"] == arm) & (curves["group"] == name)]
+                # A Kaplan-Meier curve is a staircase that starts at 1 at time 0.
+                months = np.concatenate([[0.0], curve["months"].to_numpy()])
+                event_free = np.concatenate([[1.0], curve["event_free"].to_numpy()])
+                ax.step(months, event_free, where="post", color=colour, ls=line_style, lw=1.4)
+                curve_ends[name] = event_free[-1]
+                # Patients still at risk at each tick, in a row under the axis.
+                at_risk = [int((curve["at_risk"][curve["months"] >= t]).max()) if (curve["months"] >= t).any()
+                           else 0 for t in ticks]
+                row_y = -0.335 - 0.085 * k
+                ax.text(-0.075, row_y, name, transform=ax.transAxes, ha="right", va="center",
+                        fontsize=6, color=INK2)
+                for tick, count in zip(ticks, at_risk):
+                    ax.text(tick, row_y, str(count), transform=ax.get_xaxis_transform(), ha="center",
+                            va="center", fontsize=6, color=INK2)
+            ax.text(-0.075, -0.25, "at risk", transform=ax.transAxes, ha="right", va="center",
+                    fontsize=6, color=MUTED)
+            # The group names at the right end of the curves, top to bottom,
+            # pushed apart where two curves end close together.
+            label_y = None
+            for name, end in sorted(curve_ends.items(), key=lambda item: -item[1]):
+                label_y = end if label_y is None else min(end, label_y - 0.055)
+                ax.text(horizon + 1, label_y, name, va="center", ha="left", fontsize=6.5, color=INK2)
+            # The log-rank test across the three groups, as a description.
+            p_value = groups[(groups["model"] == model) & (groups["arm"] == arm)]["logrank_p"].iloc[0]
+            ax.text(0.03, 0.05, f"log-rank P = {p_value:.1g}", transform=ax.transAxes, fontsize=6.5,
+                    color=INK2)
+            ax.set_xlim(0, horizon + 9)
+            ax.set_ylim(0, 1.02)
+            ax.set_xticks(ticks)
+            ax.tick_params(axis="y", length=2.5)
+            # Every panel shows its own time axis, because the rows of
+            # patients at risk sit under it.
+            ax.tick_params(axis="x", labelbottom=True)
+            ax.set_xlabel("Months", labelpad=1)
+            if j == 0:
+                ax.set_ylabel(f"{outcome} (share of patients)")
+            panel(ax, "abcd"[i * len(arms) + j], f"{model_label}: {ARM[arm]}")
+    fig.tight_layout(w_pad=2.5, h_pad=5.0)
+    source(f"fig9_survival_{endpoint}", abcd=curves, summary=groups)
+    save(fig, figures, f"fig9_survival_{endpoint}")
+
+
+def fig_factor_biology(tables, figures, cfg) -> None:
+    """Figure 11 of results/REPORT.md: what the outcome-linked MOFA factor is.
+
+    (a) Correlation of the factor with each biological programme, driver
+        mutation and patient characteristic, with 95% intervals; a filled
+        marker passes a false-discovery rate of 0.05.
+    (b) The factor's association with the endpoint (Cox z), alone and after
+        the part explained by each simpler variable has been removed.
+    Drawn from the tables step 11 wrote. Added after the first run; exploratory.
+    """
+    associations = pd.read_csv(tables / "biology_factor_associations.csv")
+    outcome = pd.read_csv(tables / "biology_factor_outcome.csv")
+    factor_label = cfg["added_after_first_run"]["factor_biology"]["factor"].replace("factor", "factor ")
+    kinds = {"programme": "Expression programmes", "mutation": "Mutations", "clinical": "Patient characteristics"}
+
+    fig, axes = plt.subplots(1, 2, figsize=(W, 5.0), gridspec_kw={"width_ratios": [1.35, 1]})
+
+    # a: correlations, grouped by kind, strongest first inside each group.
+    ax = axes[0]
+    ax.axvline(0, color=INK, lw=0.8)
+    y, ticks, labels = 0.0, [], []
+    for kind, title in kinds.items():
+        ax.text(-0.02, y, title, transform=ax.get_yaxis_transform(), ha="right", va="center",
+                fontsize=6.5, fontweight="bold", color=INK)
+        y -= 1
+        for row in associations[associations["kind"] == kind].itertuples():
+            interval(ax, row.r, row.ci_low, row.ci_high, y, BLUE, row.fdr < 0.05, ms=4, lw=1.2)
+            ticks.append(y); labels.append(row.feature)
+            y -= 1
+        y -= 0.5
+    ax.set_yticks(ticks, labels)
+    ax.set_ylim(y + 0.9, 0.7)
+    ax.set_xlim(-1, 1)
+    ax.set_xticks([-1, -0.5, 0, 0.5, 1], ["−1", "−0.5", "0", "0.5", "1"])
+    ax.set_xlabel(f"Correlation with MOFA {factor_label} (95% interval)")
+    panel(ax, "a", f"What {factor_label} follows")
+
+    # b: does the link to outcome survive removing a simpler variable?
+    ax = axes[1]
+    for v in (-2, 2):
+        ax.axvline(v, color=MUTED, lw=0.7, ls=(0, (1, 2)))
+    ax.axvline(0, color=INK, lw=0.8)
+    positions = np.arange(len(outcome))
+    beyond = outcome["cox_z"].abs() > 2
+    ax.barh(positions, outcome["cox_z"], height=0.62, color=[BLUE if b else AXIS for b in beyond])
+    wrapped = {"nothing": "Nothing removed",
+               "Cell cycle and proliferation": "Proliferation removed",
+               "Mutation burden": "Mutation burden removed",
+               "Stage": "Stage removed",
+               "All clinical covariates": "All clinical\ncovariates removed",
+               "Proliferation, mutation burden and clinical covariates": "All of these removed"}
+    ax.set_yticks(positions, [wrapped.get(name, name) for name in outcome["after_removing"]])
+    for position, value in zip(positions, outcome["cox_z"]):
+        ax.text(value - 0.12, position, f"{value:+.1f}".replace("-", "−"), va="center", ha="right",
+                fontsize=6.5, color=INK2)
+    ax.set_ylim(len(outcome) - 0.5, -0.5)
+    ax.set_xlim(-5, 1)
+    ax.set_xlabel("Cox z with progression")
+    ax.text(-2.08, len(outcome) - 0.56, "|z| = 2", ha="right", va="bottom", fontsize=6, color=MUTED)
+    panel(ax, "b", "Link to outcome")
+    fig.tight_layout(w_pad=1.5)
+    source("fig10_factor_biology", a=associations, b=outcome)
+    save(fig, figures, "fig10_factor_biology")
+
+
 def main() -> int:
     """Draw every figure, in the order of the report.
 
@@ -1030,6 +1168,11 @@ def main() -> int:
     fig_prediction(tables, figures, sensitivity)
     fig_integration(tables, figures, cfg, sensitivity)
     fig_contrasts(tables, figures, sensitivity, f"figS_contrasts_{sensitivity}")
+
+    # ---- added after the first run: Figures 10 and 11 ------------------------
+    fig_survival(tables, figures, cfg, primary)
+    fig_survival(tables, figures, cfg, sensitivity)
+    fig_factor_biology(tables, figures, cfg)
     return 0
 
 

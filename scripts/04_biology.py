@@ -81,13 +81,15 @@ def factor_table(cohort, cfg, seed, cache):
         seed    the project seed, so the fit is the same on every run
         cache   folder where a finished MOFA fit is saved and found again
 
-    Returns two tables:
+    Returns three tables:
         factors  one row per active factor: its Cox z with the endpoint, the
                  share of variance it explains in each omics block (r2_*), and
                  its correlation with stage, age, sex, smoking and tumour
                  mutation burden (r_*)
         weights  the weight of every expression gene (rows) on every active
                  factor (columns)
+        scores   the value of every patient (rows, named by barcode) on every
+                 active factor (columns); step 11 reads it
     """
     # The same blocks a fold would build, but with every patient as "training":
     # nothing is predicted here, so there is no test set to protect.
@@ -121,7 +123,8 @@ def factor_table(cohort, cfg, seed, cache):
     genes = np.array([n.split("__", 1)[1] for n in wide["rna"].names])
     weights = pd.DataFrame(mofa.W["rna"][:, mofa.active], index=genes,
                            columns=[f"factor{k + 1}" for k in mofa.active])
-    return pd.DataFrame(rows), weights
+    scores = pd.DataFrame(Z, index=pd.Index(cohort.patients, name="patient"), columns=weights.columns)
+    return pd.DataFrame(rows), weights, scores
 
 
 def model_genes(tables: Path, endpoint: str, min_folds: int) -> pd.Series:
@@ -289,8 +292,9 @@ def main() -> int:
     # ---- MOFA factors ---------------------------------------------------
     # A factor gets a gene list only if it is associated with the endpoint
     # (|Cox z| > 2): the genes with the largest weights on it.
-    factors, weights = factor_table(cohort, cfg, seed, Path(cfg["paths"]["cache"]) / "mofa")
+    factors, weights, factor_scores = factor_table(cohort, cfg, seed, Path(cfg["paths"]["cache"]) / "mofa")
     factors.to_csv(tables / "biology_factors.csv", index=False)
+    factor_scores.to_csv(tables / "biology_factor_scores.csv")
     print(factors.to_string(index=False, float_format=lambda v: f"{v:+.3f}"))
     for factor_name in factors.loc[factors["cox_z"].abs() > 2, "factor"]:
         factor_weights = weights[factor_name]
