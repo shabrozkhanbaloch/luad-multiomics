@@ -11,7 +11,7 @@ What it is for
 
 Where it sits
     Step 7 of 9 of `make prep`. It needs prep/utils/export_clinical.R
-    (step 6), which writes both files it reads.
+    (step 5), which writes both files it reads.
 
 Reads
     data/interim/clinical_raw.parquet   covariates, one row per patient
@@ -184,7 +184,7 @@ def main() -> int:
 
     print(f"\n=== written ===")
     print(f"  {out}  ({len(design)} patients x {len(out_cols)} columns)")
-    print("Next: python scripts/01_cv.py")
+    print("Next: Rscript prep/utils/export_geo.R")
     return 0
 
 

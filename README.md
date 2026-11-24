@@ -172,7 +172,7 @@ results/
 - **Step 4 uses the STRING database of protein interactions** (string-db.org), but not over the internet: STRING's answers for this analysis are saved in `results/network/string_edges.tsv` and `string_enrichment.tsv` and are read from there. So the network is the same for every reader, whatever STRING publishes later. `--refresh` asks STRING again (only gene symbols are sent); `--offline` forbids any request.
 - **Step 4b is optional and drives the Cytoscape desktop program** through its automation port (localhost:1234). If Cytoscape is installed but closed, the script starts it with the `cytoscape` launcher named in `config/config.yaml` and leaves it open with the network loaded; the styles are named "LUAD lists" and "LUAD Cox z". If Cytoscape is not installed, the step prints a message and the run goes on: the network statistics come from step 4, and the Cytoscape pictures in `results/figures/` are already in the repository.
 - **DIABLO is not included.** It is a classifier, and using it here would mean turning survival into a yes/no label at one time point. MOFA covers the latent-factor family without that step.
-- **`prep/` was carried over from the earlier project.** The two Python steps were rerun here and reproduce `data/processed` exactly; the R steps were not rerun in this folder.
+- **`prep/` was carried over from the earlier project** and tested here on 24 November 2026: from the raw files, it rebuilds all 15 prepared files with identical content. See [Data](#data).
 - **Figures are built to journal format.** 179 mm wide, Arial 6 to 7 pt, vector PDF with editable text beside every PNG. Colours were checked for colour-vision deficiency, and every method or gene list also has its own marker shape, so the figures read in greyscale. The workflow PDF is written only where Chrome or Chromium is installed; the SVG is always written.
 - **Data are not in the repository.** `data/` is ignored by git because the files are large. There are two ways to get them, described under [Data](#data).
 
@@ -188,12 +188,11 @@ The analysis reads the 14 files of `data/processed` and `data/interim/endpoints.
 
    The archive is checked against `config/data_bundle.sha256` before it is unpacked. The data record and its address will be given here once it is published; until then this route is not available to others.
 
-2. **Rebuild from the sources** (R and Python, about 10 GB of downloads): `make download`, `make download-methylation`, then `make prep`. **This route is not tested in this repository.** The scripts were carried over from the earlier project, where they ran; here only the two Python steps were rerun, and they reproduce their files exactly. Reading the scripts turned up three things that would stop a first run in an empty folder:
-   - `make prep` runs the mutation step before the script that writes a file it needs (`data/interim/clinical_raw.parquet`). Run `Rscript prep/utils/export_clinical.R` once before `make prep`.
-   - The methylation step needs the probe annotation file `data/raw/methylation/HM450.hg38.manifest.tsv.gz`, which no script downloads.
-   - The methylation step also asks the Genomic Data Commons a question over the internet.
+2. **Rebuild from the sources** (R and Python). `make download` and `make download-methylation` fetch about 10 GB of raw files; `make prep` then builds the 15 files in about 6 minutes. The R packages are installed by `Rscript prep/00_setup_r.R`.
 
-   The sources change with new data releases as well, so even a successful rebuild may not give byte-identical files. For reproducing the reported numbers, use route 1.
+   What was tested, on 24 November 2026: `make prep`, in an empty copy of the repository, from the raw files downloaded in August 2026. All 15 files came out with exactly the same content as the archive: every value, every label, every column type. Twelve of them differ from the archive byte for byte, because a newer version of the R package that writes the files (arrow 26) lays the same table out differently on disk; the three files written by Python are byte-identical. So this route gives the same data, but not an archive with the same checksum.
+
+   What was not tested: the downloads themselves. They were not repeated, and the sources change with new data releases, so a download made today may differ from the one made in August 2026. For reproducing the reported numbers exactly, use route 1.
 
 ## Relation to my MSc dissertation
 

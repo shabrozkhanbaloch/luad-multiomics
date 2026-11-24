@@ -224,7 +224,7 @@ for (co in cfg$data$geo) {
   id <- co$id
   f  <- file.path(cfg$paths$interim, sprintf("%s_tumour_eset.rds", id))
   if (!file.exists(f)) {
-    stop(sprintf("%s not found -- run `make filter-geo` first", f))
+    stop(sprintf("%s not found -- run `Rscript prep/01b_filter_geo.R` first", f))
   }
   cat(sprintf("\n%s  (%s, %s)\n", id, co$platform, co$role))
   e <- readRDS(f)

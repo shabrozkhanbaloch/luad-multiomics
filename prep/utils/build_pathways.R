@@ -10,7 +10,7 @@
 #   Table S3.
 #
 # Where it sits
-#   Step 3 of 9 of `make prep`. prep/04_preprocess_mutation.py (step 5)
+#   Step 3 of 9 of `make prep`. prep/04_preprocess_mutation.py (step 6)
 #   reads the file written here.
 #
 # Reads    the copy of that table that comes with the R package maftools.
@@ -84,7 +84,7 @@ if (length(unknown)) {
   stop("unmapped pathway label(s) from maftools ", ver, ": ",
        paste(unknown, collapse = ", "),
        "\n  add them to KEYS -- do not lower-case blindly, the feature ",
-       "names in Table 2b depend on these keys")
+       "names in the pathway alteration table depend on these keys")
 }
 missing_keys <- setdiff(names(KEYS), unique(ref$Pathway))
 if (length(missing_keys)) {

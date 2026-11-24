@@ -279,4 +279,4 @@ log_msg("=== written ===")
 log_msg("  ", file.path(INTERIM, "barcodes.parquet"), "  (",
         nrow(long), " rows, ", length(blocks), " blocks)")
 log_msg("  ", file.path(INTERIM, "consort_counts.csv"))
-log_msg("Next: Rscript prep/utils/export_clinical.R")
+log_msg("Next: Rscript prep/utils/build_pathways.R")

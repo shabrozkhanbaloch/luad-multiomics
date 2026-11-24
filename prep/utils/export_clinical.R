@@ -9,7 +9,7 @@
 #   endpoints.
 #
 # Where it sits
-#   Step 6 of 9 of `make prep`, after `make download`.
+#   Step 5 of 9 of `make prep`, after `make download`.
 #   prep/04_preprocess_mutation.py and prep/05_preprocess_clinical.py read
 #   the covariate table written here, so this script must have run before
 #   either of them.
@@ -309,4 +309,4 @@ arrow::write_parquet(endpoints, out_endp)
 log_msg("=== written ===")
 log_msg("  ", out_clin, "  (", nrow(clinical), " patients, ", ncol(clinical), " cols)")
 log_msg("  ", out_endp, "  (", nrow(endpoints), " patients)")
-log_msg("Next: Rscript prep/03_preprocess_rna.R")
+log_msg("Next: python prep/04_preprocess_mutation.py")

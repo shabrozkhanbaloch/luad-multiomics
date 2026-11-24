@@ -124,7 +124,7 @@ log_msg <- function(...) cat(format(Sys.time(), "[%H:%M:%S] "), ..., "\n", sep =
 # it asks for is the probe annotation described in the header.
 # ---------------------------------------------------------------
 if (!dir.exists(GDCDIR)) stop(GDCDIR, " not found -- run `make download-methylation`")
-if (!file.exists(MANIFEST)) stop(MANIFEST, " not found -- see Makefile methylation-block")
+if (!file.exists(MANIFEST)) stop(MANIFEST, " not found -- run `make download-methylation`")
 
 # All beta files, in whatever sub-folders the download put them.
 log_msg("=== locating files ===")
@@ -245,4 +245,4 @@ log_msg("=== written ===")
 log_msg("  ", out_beta, "  (", mb(out_beta), ")")
 log_msg("  ", out_meta, "  (", nrow(beta), " probes)")
 log_msg(nrow(beta), " probes x ", ncol(beta), " patients")
-log_msg("Next: python scripts/01_cv.py")
+log_msg("The data are prepared. Next: make all")

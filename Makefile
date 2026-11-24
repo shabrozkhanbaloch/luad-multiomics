@@ -40,7 +40,8 @@ help:
 	@echo "  make setup       create .venv and install requirements"
 	@echo "  make data        download the prepared data (1.5 GB) and check it; then 'make all' runs"
 	@echo "  make prep        rebuild data/processed from data/raw (needs R, see README)"
-	@echo "  make download    fetch the raw data (needs R; skips what is present)"
+	@echo "  make download    fetch the raw data except methylation (needs R; skips what is present)"
+	@echo "  make download-methylation   fetch the methylation files and the probe annotation (needs R)"
 
 # ---- setup: run once, first. Creates the Python environment in .venv and
 # installs the packages of requirements.txt. Needs python3 and the internet.
@@ -108,7 +109,7 @@ DATA_TAR := luad-multiomics-data-v1.tar
 data:
 	@test -n "$(DATA_URL)" || { echo "Set DATA_URL to the address of $(DATA_TAR) (README, section Data)."; exit 1; }
 	curl -L --fail -o $(DATA_TAR) "$(DATA_URL)"
-	sha256sum -c config/data_bundle.sha256
+	sha256sum -c config/data_bundle.sha256 || shasum -a 256 -c config/data_bundle.sha256
 	tar -xf $(DATA_TAR)
 	rm $(DATA_TAR)
 	@echo "data/processed and data/interim/endpoints.parquet are in place"
@@ -133,17 +134,22 @@ download-methylation:
 	    platform="Illumina Human Methylation 450", \
 	    data.type="Methylation Beta Value", sample.type="Primary Tumor"); \
 	  GDCdownload(q, method="api", files.per.chunk=20, directory="GDCdata")'
-# The nine steps of prep. Note on the order: step 5 (04_preprocess_mutation.py)
-# reads data/interim/clinical_raw.parquet, which step 6 (export_clinical.R)
-# writes. In a folder where that file does not exist yet, run
-# `Rscript prep/utils/export_clinical.R` once before `make prep`.
+	# The probe annotation (which probe sits where, and which probes to mask),
+	# from the Zhou lab's InfiniumAnnotation collection. Checked against the
+	# checksum of the copy the published data were made with.
+	curl -L --fail -o data/raw/methylation/HM450.hg38.manifest.tsv.gz \
+	  https://github.com/zhou-lab/InfiniumAnnotationV1/raw/main/Anno/HM450/HM450.hg38.manifest.tsv.gz
+	echo "3b2e1598d456b12b38da9bc6d340be59  data/raw/methylation/HM450.hg38.manifest.tsv.gz" | md5sum -c -
+# The nine steps of prep, in an order where every step finds the files of the
+# steps before it. export_clinical.R comes before the mutation step because
+# that step reads the file it writes (data/interim/clinical_raw.parquet).
 prep:
 	Rscript prep/01b_filter_geo.R
 	Rscript prep/utils/export_barcodes.R
 	Rscript prep/utils/build_pathways.R
 	Rscript prep/03_preprocess_rna.R
-	$(PY) prep/04_preprocess_mutation.py
 	Rscript prep/utils/export_clinical.R
+	$(PY) prep/04_preprocess_mutation.py
 	$(PY) prep/05_preprocess_clinical.py
 	Rscript prep/utils/export_geo.R
 	Rscript prep/16_preprocess_methylation.R

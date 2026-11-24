@@ -58,6 +58,8 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 
+from scipy.stats import norm
+
 from luad import biology as B
 from luad.data import OMICS, load_cohort
 from luad.integrate import cached_mofa
@@ -264,9 +266,10 @@ def main() -> int:
     z = z[~z.index.duplicated()]        # if a symbol occurs twice, the first one is kept
     cut, top = float(bio["prognostic_z"]), int(bio["max_genes_per_list"])
     # How many genes pass the cut-off, beside how many would pass if no gene
-    # were related to the endpoint (0.0027 is the two-sided normal tail beyond 3).
+    # were related to the endpoint: the share of a normal distribution that
+    # lies beyond the cut-off on either side (0.0027 for a cut-off of 3).
     n_tail = int((z.abs() > cut).sum())
-    expected = 0.0027 * len(z)
+    expected = 2 * norm.sf(cut) * len(z)
     print(f"  {n_tail} of {len(z)} expressed genes at |z| > {cut} "
           f"(about {expected:.0f} expected by chance)")
 
@@ -392,8 +395,10 @@ def main() -> int:
 
     # ---- figure and last messages ------------------------------------------
     draw(G, pd.DataFrame(rows), figures / "network.png")
-    if enrich:
-        pd.DataFrame(enrich).to_csv(tables / "biology_enrichment.csv", index=False)
+    # Always written, even when empty, so that a table left by an earlier run
+    # can never be mistaken for this run's result.
+    pd.DataFrame(enrich, columns=["module", "category", "term", "genes_in_term", "fdr"]).to_csv(
+        tables / "biology_enrichment.csv", index=False)
     print(pd.DataFrame(rows).head(10).to_string(index=False, float_format=lambda v: f"{v:+.2f}"))
     print(f"\n  open in Cytoscape: {net_dir}/network.graphml")
     return 0

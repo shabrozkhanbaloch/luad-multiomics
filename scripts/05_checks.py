@@ -225,7 +225,7 @@ def width_sweep(cohort, cfg, seed, tables, jobs):
     best = sweep["minus_clinical"].max()
     add("3 capacity", "no fixed width puts omics above clinical",
         f"best gain over clinical {best:+.3f}", None,
-        "mean over 25 folds at widths " + ", ".join(map(str, cfg["features"]["k_sweep"]))
+        f"mean over {len(folds)} folds at widths " + ", ".join(map(str, cfg["features"]["k_sweep"]))
         + "; see width_sweep.csv")
 
 

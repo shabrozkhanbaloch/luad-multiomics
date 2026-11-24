@@ -4,7 +4,7 @@
 #
 # ---------------------------------------------------------------------
 # GENERATED FILE -- do not edit by hand.
-#   Rscript src/utils/build_pathways.R
+#   Rscript prep/utils/build_pathways.R
 #
 # Source: Table S3 as distributed with maftools 2.18.0 (inst/extdata/
 # oncogenic_sig_patwhays.tsv), version-pinned in renv.lock. An earlier

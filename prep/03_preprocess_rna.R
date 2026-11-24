@@ -293,5 +293,5 @@ log_msg("  ", out_counts, "  (", mb(out_counts), ")")
 log_msg("  ", out_rank,   "  (", mb(out_rank),   ")")
 log_msg("  ", out_meta,   "  (", nrow(rd), " genes)")
 log_msg(nrow(counts), " ", want, " genes x ", ncol(counts), " patients")
-log_msg(if (prefix == "rna") "Next: python prep/04_preprocess_mutation.py"
+log_msg(if (prefix == "rna") "Next: Rscript prep/utils/export_clinical.R"
         else "Done.")

@@ -358,11 +358,12 @@ def fit(model: str, X: np.ndarray, y, train: np.ndarray, params: dict, score: fl
 
     params and score are the two values returned by `tune`. The other
     arguments are described at the top of this file. Returns a `Fitted`.
-    Any model name other than "coxnet" is fitted as a forest.
     """
     if model == "coxnet":
         return _fit_coxnet(X, y, train, params, score)
-    return _fit_rsf(X, y, train, params, score, cfg, seed, threads, quick)
+    if model == "rsf":
+        return _fit_rsf(X, y, train, params, score, cfg, seed, threads, quick)
+    raise ValueError(f"unknown model {model!r}")
 
 
 def tune_and_fit(model, X, y, train, splits, cfg, seed, threads=1, quick=False) -> Fitted | None:

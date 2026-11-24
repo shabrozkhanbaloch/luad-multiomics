@@ -23,7 +23,7 @@ Words used below
       features for the outcomes it is fitted on.
 
 Where it sits
-    Step 5 of 9 of `make prep`, after `make download`.
+    Step 6 of 9 of `make prep`, after `make download`.
 
 Reads
     data/raw/mc3.v0.2.8.PUBLIC.maf.gz   the MC3 file (753 MB)
@@ -115,7 +115,7 @@ def main() -> int:
     clin_path = interim / "clinical_raw.parquet"
     for p in (maf_path, clin_path):
         if not p.exists():
-            sys.exit(f"{p} not found.\n  run `make download` then `make export-pheno`")
+            sys.exit(f"{p} not found.\n  run `make download`, then `Rscript prep/utils/export_clinical.R`")
 
     print("=" * 62)
     print("MUTATION BLOCK  --  MC3 PanCanAtlas consensus MAF")
@@ -264,12 +264,12 @@ def main() -> int:
     if cap is not None and len(recurrent) > cap:
         print(f"  ... and {len(recurrent) - len(kept)} more, dropped by the "
               f"gene_max_features={cap} cap")
-        print(f"  The protocol expected ~26 genes at this threshold. LUAD's "
-              f"mutation burden\n  makes that wrong by a factor of ~27: at 210 PFI "
-              f"events, {len(recurrent)} binary\n  features is EPV "
-              f"{210 / len(recurrent):.2f}. See config/config.yaml for the rationale.")
+        print(f"  That is far more genes than the events can support: at the 210 PFI "
+              f"events\n  of the source cohort, {len(recurrent)} yes/no features is "
+              f"{210 / len(recurrent):.2f} events per feature.\n  This is why the block "
+              f"is capped (gene_max_features in config/config.yaml).")
     print("  (reported only -- both the threshold and the cap are refitted")
-    print("   inside each training fold in 06_nested_cv.py)")
+    print("   inside each training fold, in src/luad/transforms.py)")
     n_feat = len(kept) + 1 + len(pw_cols)
     print(f"\n  block width at deployment: {len(kept)} genes + 1 TMB + "
           f"{len(pw_cols)} pathways = {n_feat} features  (EPV {210 / n_feat:.1f})")
