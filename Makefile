@@ -109,11 +109,12 @@ freeze:
 
 # ---- data: download the prepared data as one archive. This is the short
 # way to get the data; R is not needed. Run it once, before `make all`:
-#   make data DATA_URL=<address of the archive>
-# DATA_URL is the file's address in the data record (see README, "Data").
+#   make data
+# By default the archive comes from the Zenodo record 24509337. To use a copy
+# kept elsewhere, give its address: make data DATA_URL=<address>.
 # The archive is checked against the checksum in config/data_bundle.sha256
 # before it is unpacked, and the downloaded archive is deleted afterwards.
-DATA_URL ?=
+DATA_URL ?= https://zenodo.org/records/24509337/files/luad-multiomics-data-v1.tar?download=1
 DATA_TAR := luad-multiomics-data-v1.tar
 data:
 	@test -n "$(DATA_URL)" || { echo "Set DATA_URL to the address of $(DATA_TAR) (README, section Data)."; exit 1; }

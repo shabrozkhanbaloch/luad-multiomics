@@ -60,7 +60,7 @@ You need Python 3.13, `make`, about 4 GB of free disk and about 3 hours. It was 
 
 ```bash
 make setup     # once: create .venv and install the pinned packages (about a minute)
-make data DATA_URL=<address of the data archive, see "Data">   # once: 1.5 GB
+make data      # once: download the prepared data from Zenodo and check it (1.5 GB)
 make test      # 10 seconds, synthetic data: is the installation sound?
 make quick     # 1 minute, real data, tiny settings: does the pipeline run here?
 make all       # everything, in order: about 3 hours with 12 workers
@@ -200,10 +200,10 @@ The analysis reads the 14 files of `data/processed` and `data/interim/endpoints.
 1. **Download the prepared data.** One archive, with the exact files the reported numbers were computed from:
 
    ```bash
-   make data DATA_URL=<address of luad-multiomics-data-v1.tar>
+   make data
    ```
 
-   The archive is checked against `config/data_bundle.sha256` before it is unpacked. The data record and its address will be given here once it is published; until then this route is not available to others.
+   The archive is the Zenodo record [zenodo.org/records/24509337](https://zenodo.org/records/24509337) (`luad-multiomics-data-v1.tar`, 1.5 GB). `make data` downloads it, checks it against `config/data_bundle.sha256` and unpacks it into `data/`. To use a copy kept elsewhere: `make data DATA_URL=<address>`.
 
 2. **Rebuild from the sources** (R and Python). `make download` and `make download-methylation` fetch about 10 GB of raw files; `make prep` then builds the 15 files in about 6 minutes. The R packages are installed by `Rscript prep/00_setup_r.R`.
 
