@@ -3,7 +3,7 @@
 
     python scripts/02_bootstrap.py                # primary endpoint
     python scripts/02_bootstrap.py --endpoint os
-    python scripts/02_bootstrap.py --quick        # 200 resamples
+    python scripts/02_bootstrap.py --quick        # 200 resamples, written to *_quick files
 
 What it is for
     Step 1 gives one concordance per arm. This step says how certain each one
@@ -148,11 +148,14 @@ def main() -> int:
     contrasts = contrasts.sort_values(
         ["part", "metric"], key=lambda s: s.map(order) if s.name == "part" else s,
         kind="stable").reset_index(drop=True)
-    arms.to_csv(tables / f"arms_{endpoint}.csv", index=False)
-    contrasts.to_csv(tables / f"contrasts_{endpoint}.csv", index=False)
+    # A quick run is a trial. It gets its own file names so that it can never
+    # replace the tables of the full run.
+    suffix = "_quick" if args.quick else ""
+    arms.to_csv(tables / f"arms_{endpoint}{suffix}.csv", index=False)
+    contrasts.to_csv(tables / f"contrasts_{endpoint}{suffix}.csv", index=False)
     # The control is left out of the plot: it is zero by design and says
     # nothing about the data.
-    forest(contrasts[contrasts["part"] != "control"], figures / f"contrasts_{endpoint}.png",
+    forest(contrasts[contrasts["part"] != "control"], figures / f"contrasts_{endpoint}{suffix}.png",
            f"Pre-declared contrasts, {endpoint.upper()}")
 
     # ---- Print the summary ----

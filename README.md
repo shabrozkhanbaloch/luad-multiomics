@@ -188,7 +188,12 @@ The analysis reads the 14 files of `data/processed` and `data/interim/endpoints.
 
    The archive is checked against `config/data_bundle.sha256` before it is unpacked. The data record and its address will be given here once it is published; until then this route is not available to others.
 
-2. **Rebuild from the sources.** `make download` and `make prep` (R and Python, about 10 GB). This route was carried over from the earlier project and its R steps have not been rerun in this folder, and the sources themselves change with new data releases, so it may not give byte-identical files.
+2. **Rebuild from the sources** (R and Python, about 10 GB of downloads): `make download`, `make download-methylation`, then `make prep`. **This route is not tested in this repository.** The scripts were carried over from the earlier project, where they ran; here only the two Python steps were rerun, and they reproduce their files exactly. Reading the scripts turned up three things that would stop a first run in an empty folder:
+   - `make prep` runs the mutation step before the script that writes a file it needs (`data/interim/clinical_raw.parquet`). Run `Rscript prep/utils/export_clinical.R` once before `make prep`.
+   - The methylation step needs the probe annotation file `data/raw/methylation/HM450.hg38.manifest.tsv.gz`, which no script downloads.
+   - The methylation step also asks the Genomic Data Commons a question over the internet.
+
+   The sources change with new data releases as well, so even a successful rebuild may not give byte-identical files. For reproducing the reported numbers, use route 1.
 
 ## Relation to my MSc dissertation
 

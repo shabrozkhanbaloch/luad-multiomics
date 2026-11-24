@@ -51,6 +51,7 @@ import pandas as pd  # noqa: E402
 from matplotlib.colors import LinearSegmentedColormap  # noqa: E402
 from matplotlib.lines import Line2D  # noqa: E402
 
+from luad import ROOT  # noqa: E402
 from luad.biology import SHORT_TERMS  # noqa: E402
 from luad.data import cohort_flow, load_cohort  # noqa: E402
 from luad.models import MODEL_LABELS  # noqa: E402
@@ -124,7 +125,7 @@ def save(fig, figures, stem: str) -> None:
 
 
 # Where the numbers behind the figures are written.
-SOURCE = Path("results/source_data")
+SOURCE = ROOT / "results" / "source_data"
 
 
 def source(stem: str, **panels: pd.DataFrame) -> None:
