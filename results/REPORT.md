@@ -1,6 +1,6 @@
 # Multi-omics integration for prognosis in lung adenocarcinoma: results report
 
-Run of 22 November 2026. One full pass of the pipeline, one seed. A rerun on 23 November 2026 in a clean copy of the repository gave the same numbers.
+Run of 22 November 2026. One full pass of the pipeline, one seed. Reruns on 23 and 24 November 2026, the second from a fresh clone with nothing but the code and the data archive, gave the same numbers.
 
 This report explains the results. The complete numbers, generated straight from the tables, are in [RESULTS.md](../RESULTS.md); every figure here is drawn from the same tables by `scripts/07_figures.py` (`make figures`). Each figure is saved as a 300 dpi PNG and a vector PDF in [figures/](figures/), and the numbers behind each panel are in [source_data/](source_data/).
 

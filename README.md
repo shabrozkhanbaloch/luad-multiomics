@@ -63,14 +63,14 @@ make setup     # once: create .venv and install the pinned packages (about a min
 make data DATA_URL=<address of the data archive, see "Data">   # once: 1.5 GB
 make test      # 10 seconds, synthetic data: is the installation sound?
 make quick     # 1 minute, real data, tiny settings: does the pipeline run here?
-make all       # everything, in order: 2 h 52 min with 12 workers
+make all       # everything, in order: about 3 hours with 12 workers
 make verify    # a second: do your tables match the published ones?
 make help      # the individual steps and what they cost
 ```
 
 `make all` ends with `make verify`, which compares the 19 result tables of your run with the published ones in `tests/reference_tables/` and prints PASS or the difference for each.
 
-**It has been reproduced.** `make all` was rerun on 23 November 2026 in a clean copy of the repository with a newly built environment. Every reported number came out identical to the first run, and the ten publication figures were identical pixel for pixel; the only differences were the scale of one control arm's stored risks and the order of tied rows in one table, and that order is fixed now. Package versions are pinned in `requirements.txt` and `requirements.lock`.
+**It has been reproduced, twice.** On 23 November 2026 `make all` was rerun in a clean copy with a newly built environment and gave the same numbers. On 24 November the repository was cloned into an empty folder, its results were deleted, the environment was built from the pinned versions, the data came from the archive, and `make all` ran from start to finish in 3 hours with 12 workers: all 19 tables passed `make verify`, and every table, `RESULTS.md`, every source-data file and all 15 figures drawn by Python came out byte for byte or pixel for pixel identical. What is not identical from run to run: the creation date inside the PDF files, and the two pictures exported by the Cytoscape program, which differed in 0.05% of their pixels.
 
 **If a step fails**, the run stops there. Fix the cause and continue with the remaining steps, for example `make biology cytoscape permute checks report cohort figures verify`. Finished steps do not need to be repeated.
 
