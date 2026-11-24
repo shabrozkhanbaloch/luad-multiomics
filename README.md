@@ -56,17 +56,45 @@ Primary endpoint: progression-free interval, 176 events. Metric: Uno's C (0.5 is
 
 ## Run it
 
+You need Python 3.13, `make`, about 4 GB of free disk and about 3 hours. It was run and tested on Linux only. The internet is needed for `make setup` and `make data`, and not after that. R and Cytoscape are **not** needed.
+
 ```bash
-make setup     # once: create .venv and install requirements.txt
-make test      # 10 seconds, synthetic data
-make quick     # 1 minute, real data, tiny settings
-make all       # everything, in order (about 3 hours)
+make setup     # once: create .venv and install the pinned packages (about a minute)
+make data DATA_URL=<address of the data archive, see "Data">   # once: 1.5 GB
+make test      # 10 seconds, synthetic data: is the installation sound?
+make quick     # 1 minute, real data, tiny settings: does the pipeline run here?
+make all       # everything, in order: 2 h 52 min with 12 workers
+make verify    # a second: do your tables match the published ones?
 make help      # the individual steps and what they cost
 ```
 
-`make all` was rerun on 23 November 2026 in a clean copy of the repository with a newly built environment. Every reported number came out identical to the first run, and the ten publication figures were identical pixel for pixel; the only differences were the scale of one control arm's stored risks and the order of tied rows in one table. It took 2 hours 52 minutes with 12 workers. The package versions of that run are in `results/pip_freeze.txt`; `requirements.txt` itself does not pin versions.
+`make all` ends with `make verify`, which compares the 19 result tables of your run with the published ones in `tests/reference_tables/` and prints PASS or the difference for each.
 
-A step that fails stops the run. To continue from, say, step 4: `make biology cytoscape permute checks report figures cohort`.
+**It has been reproduced.** `make all` was rerun on 23 November 2026 in a clean copy of the repository with a newly built environment. Every reported number came out identical to the first run, and the ten publication figures were identical pixel for pixel; the only differences were the scale of one control arm's stored risks and the order of tied rows in one table, and that order is fixed now. Package versions are pinned in `requirements.txt` and `requirements.lock`.
+
+**If a step fails**, the run stops there. Fix the cause and continue with the remaining steps, for example `make biology cytoscape permute checks report cohort figures verify`. Finished steps do not need to be repeated.
+
+**New to the project?** Read "Words used here" below, then `config/config.yaml` (the whole plan, with comments), then the scripts in the order of the table. Each script starts with what it is for, what it reads, what it writes and how long it takes.
+
+### Words used here
+
+| Word | Meaning |
+|---|---|
+| Block | One kind of data about a patient: clinical, expression (`rna`), mutation or methylation |
+| Arm | One way of using the blocks to predict, for example `clinical`, `clinical+rna`, `early`, `late`, `mofa` |
+| Early fusion | All blocks joined into one wide table, one model |
+| Late fusion | One model per block; their risk scores are averaged |
+| MOFA | A method that summarises the omics blocks as a few shared "factors"; the model then uses the factors |
+| Scenario | What the test patient is missing: nothing, one omics block, or all omics. Written after `@`, as in `mofa@no_rna` |
+| Endpoint | The outcome predicted. PFI, progression-free interval: time until the cancer progresses. OS: overall survival |
+| Censored | A patient whose follow-up ended before the event happened; we know only that it had not happened yet |
+| Concordance, Uno's C | How often the model ranks two patients in the right order. 0.5 is a coin toss, 1.0 is perfect. Uno's C is a version that corrects for censoring |
+| Fold | Cross-validation splits the patients into 5 parts; each part in turn is held out for testing and the model is trained on the rest. Repeated 5 times: 25 folds |
+| Nested | Settings of a model are chosen by a second cross-validation inside the training part only, so the test patients never influence them |
+| Bootstrap | The patients are redrawn with replacement 2,000 times to see how much a number would move with other patients; this gives the 95% intervals |
+| Contrast | A planned comparison, "arm A minus arm B" in Uno's C |
+| Resolved | The 95% interval of a contrast does not include zero |
+| Leakage | Information from test patients reaching the model during training, which makes results look better than they are |
 
 Each step is one script in `scripts/`, numbered in the order they run:
 
@@ -75,12 +103,13 @@ Each step is one script in `scripts/`, numbered in the order they run:
 | 1 | `01_cv.py` | `cv_<endpoint>_predictions.parquet`: one risk per fold, model, arm and test patient |
 | 2 | `02_bootstrap.py` | `arms_<endpoint>.csv`, `contrasts_<endpoint>.csv`, forest plot |
 | 3 | `03_external.py` | `external_arms.csv`, `external_contrasts.csv`, figure |
-| 4 | `04_biology.py` | `biology_*.csv`, `network.png`, `results/network/network.graphml` |
-| 4b | `04b_cytoscape.py` | Loads the network into Cytoscape, styles and analyses it there; `network_cytoscape_*.png` and `.pdf`, `biology_network_centrality.csv`, `results/network/network.cys` |
+| 4 | `04_biology.py` | `biology_*.csv` (factors, gene lists, modules, enrichment, network statistics), `network.png`, `results/network/network.graphml` |
+| 4b | `04b_cytoscape.py` | Optional. Loads the network into the Cytoscape desktop program, styles it and checks step 4's network statistics against Cytoscape's own; `network_cytoscape_*.png` and `.pdf`, `results/network/network.cys`. Skipped with a message where Cytoscape is not installed |
 | 5 | `05_checks.py` | `checks.csv`, `width_sweep.csv` |
 | 6 | `06_report.py` | `RESULTS.md`, generated from the tables and never edited by hand |
 | 7 | `07_figures.py` | The publication figures in `results/figures/` (`fig*.png`, `fig*.pdf`, the workflow as SVG and PDF, the cohort flow diagram) used by `results/REPORT.md`, and `results/source_data/`: the numbers behind every panel, one CSV per panel |
 | 8 | `08_cohort_table.py` | `cohort_characteristics.csv` and `.md`: baseline characteristics of the patients analysed; `cohort_flow.csv`: how 509 patients become 440 |
+| 9 | `09_verify.py` | Nothing: compares the tables of this run with `tests/reference_tables/` and prints PASS or the differences |
 
 `results/REPORT.md` is the one hand-written results document. Its numbers were checked against the tables of the 22 November 2026 run, which the 23 November rerun reproduced; after a rerun, regenerate `RESULTS.md` and the figures, then update the report's text.
 
@@ -125,8 +154,8 @@ src/luad/              the library
   bootstrap.py         paired patient-level bootstrap
   external.py          stack TCGA and a GEO cohort into one train/test problem
   biology.py           Cox scores, STRING, network modules, export
-scripts/               the eight steps
-tests/                 unit tests on a synthetic cohort
+scripts/               the nine steps
+tests/                 unit tests on a synthetic cohort; reference_tables/ for `make verify`
 prep/                  rebuild data/processed from raw downloads (R and Python)
 results/
   REPORT.md            the explained results, with figures
@@ -140,8 +169,8 @@ results/
 
 - **MOFA uses a Gaussian likelihood for every view**, including the 0/1 mutation features. This is an approximation; it keeps the projection of a new patient onto the factors in closed form.
 - **New patients are projected onto the factors**, not included in the MOFA fit: `Z = (I + sum W'TW)^-1 sum W'T x` over the views the patient has. Training patients go through the same projection, so the model is trained on what it will see.
-- **Step 4 sends gene symbols to the STRING database** (string-db.org) and caches the answer in `results/network/string_edges.tsv`. Nothing else leaves the machine. `--offline` uses the cache only. The enrichment call is not cached and is not retried, so step 4 needs the STRING site to be reachable; if it is not, the run stops there and can be continued.
-- **Step 4b drives the Cytoscape desktop program** through its automation port (localhost:1234). If Cytoscape is not open, the script starts it with the `cytoscape` launcher (`~/.local/bin/cytoscape`, also in the desktop menu under Science) and leaves it open with the network loaded. The styles are named "LUAD lists" and "LUAD Cox z". The positions of the genes inside a module are not identical from run to run; the modules, the interactions and the centrality table are. On a machine without Cytoscape, skip this step; nothing else depends on it.
+- **Step 4 uses the STRING database of protein interactions** (string-db.org), but not over the internet: STRING's answers for this analysis are saved in `results/network/string_edges.tsv` and `string_enrichment.tsv` and are read from there. So the network is the same for every reader, whatever STRING publishes later. `--refresh` asks STRING again (only gene symbols are sent); `--offline` forbids any request.
+- **Step 4b is optional and drives the Cytoscape desktop program** through its automation port (localhost:1234). If Cytoscape is installed but closed, the script starts it with the `cytoscape` launcher named in `config/config.yaml` and leaves it open with the network loaded; the styles are named "LUAD lists" and "LUAD Cox z". If Cytoscape is not installed, the step prints a message and the run goes on: the network statistics come from step 4, and the Cytoscape pictures in `results/figures/` are already in the repository.
 - **DIABLO is not included.** It is a classifier, and using it here would mean turning survival into a yes/no label at one time point. MOFA covers the latent-factor family without that step.
 - **`prep/` was carried over from the earlier project.** The two Python steps were rerun here and reproduce `data/processed` exactly; the R steps were not rerun in this folder.
 - **Figures are built to journal format.** 179 mm wide, Arial 6 to 7 pt, vector PDF with editable text beside every PNG. Colours were checked for colour-vision deficiency, and every method or gene list also has its own marker shape, so the figures read in greyscale. The workflow PDF is written only where Chrome or Chromium is installed; the SVG is always written.

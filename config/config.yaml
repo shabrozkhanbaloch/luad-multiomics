@@ -1,12 +1,35 @@
 # LUAD multi-omics integration: the one configuration file.
+#
+# Every script reads its settings from here: the analysis (scripts/ and
+# src/luad/) and the data preparation (prep/).
+#
 # The analysis plan (blocks, models, arms, scenarios, contrasts) is fixed here
 # before anything is run. Adding to it afterwards is a change of plan and
 # should be recorded in README.md, not done quietly.
+#
+# How to read this file. It is written in YAML: `key: value` is a setting,
+# indentation groups settings into sections, [a, b] is a list, and
+# everything after a # is a note for the reader.
 
+# ---------------- Project ----------------
+# seed is the starting number for every random choice (how patients are
+# split into folds, the bootstrap draws, the forests). With the same seed,
+# a rerun makes the same choices.
 project:
   name: luad-multiomics
   seed: 42
 
+# ---------------- Folders ----------------
+# All relative to the project folder.
+#   raw        the downloads, as they arrive (prep/01_download.R)
+#   interim    intermediate files of the preparation. One of them,
+#              endpoints.parquet, is read by the analysis.
+#   processed  the prepared files the analysis reads
+#   cache      results the analysis saves to avoid recomputing them, such
+#              as fitted MOFA models
+#   tables, figures, network   where the results are written
+#   logs       the Makefile writes its logs to logs/ by itself; no script
+#              reads this entry
 paths:
   raw:        data/raw
   interim:    data/interim
@@ -18,17 +41,35 @@ paths:
   logs:       logs
 
 # ---------------- Data sources (used by prep/) ----------------
+# Where the raw data come from, and the fixed rules for selecting samples
+# and mutations. The analysis itself does not read this section.
 data:
+  # Download addresses of the two files that are fetched by plain download.
   urls:
     # TCGA-CDR-SupplementalTableS1.xlsx (Liu et al. 2018) - survival endpoints
     tcga_cdr: https://api.gdc.cancer.gov/data/1b5f413e-a8d1-4d10-92eb-7c4ae739ed81
     # mc3.v0.2.8.PUBLIC.maf.gz (Ellrott et al. 2018) - somatic mutations
     mc3_maf:  https://api.gdc.cancer.gov/data/1c8cfe5f-e52d-41ba-94da-f15ea1337efc
+  # TCGA lung adenocarcinoma, from the Genomic Data Commons (GDC).
+  #   project       the GDC's name of the study
+  #   workflow      the GDC's name of the gene-count files: reads aligned
+  #                 with the program STAR and counted per gene
+  #   sample_types  which samples to keep, by the two-digit code inside the
+  #                 TCGA barcode. "01" is a primary solid tumour.
+  #   dedup_rule    how one sample is chosen when a patient has several:
+  #                 vial A first, then the lowest plate number. This line
+  #                 documents the rule. The rule itself is written in the
+  #                 prep scripts, which do not read this setting.
   tcga:
     project: TCGA-LUAD
     workflow: STAR - Counts
     sample_types: ["01"]
     dedup_rule: prefer_vial_A_then_lowest_plate
+  # Somatic mutations.
+  #   source     a label for the reader; no script reads it
+  #   filter     keep only mutation calls whose quality flag is PASS
+  #   nonsilent  the kinds of mutation that count: those that change the
+  #              protein. Silent mutations are not in the list.
   mutation:
     source: MC3 PanCanAtlas consensus MAF
     filter: PASS
@@ -42,8 +83,20 @@ data:
       - Splice_Site
       - Translation_Start_Site
       - Nonstop_Mutation
+  # A label for the reader: the survival endpoints come from the TCGA
+  # Clinical Data Resource. No script reads this setting.
   clinical:
     endpoint_source: TCGA-CDR (Liu et al. 2018, Table S1)
+  # The three external cohorts from the Gene Expression Omnibus (GEO).
+  #   id            the GEO series
+  #   platform      GEO's identifier of the microarray type
+  #   role          a label that is printed in logs and tables
+  #   tumour_field, tumour_value
+  #                 the column of the sample description that names the
+  #                 tissue, and the value that means "tumour". Samples with
+  #                 any other value are dropped (prep/01b_filter_geo.R).
+  #   expected_n    the number of tumour samples expected. A different
+  #                 number gives a warning.
   geo:
     - {id: GSE72094, platform: GPL15048, role: primary_external,
        tumour_field: "source_name_ch1",   tumour_value: "lung adenocarcinoma", expected_n: 442}
@@ -52,30 +105,64 @@ data:
     - {id: GSE68465, platform: GPL96,    role: optional_extension,
        tumour_field: "disease_state:ch1", tumour_value: "Lung Adenocarcinoma", expected_n: 443}
 
+# ---------------- Endpoints ----------------
+#   primary      the outcome every main result is about: PFI
+#   sensitivity  a second outcome, overall survival (OS), on which the
+#                analysis is repeated to see whether the conclusions hold
+#   admin_censor_months
+#                follow-up is cut at this many months for everyone. An event
+#                after the cut counts as not seen (the patient is censored
+#                at the cut).
 endpoint:
   primary: PFI                 # progression-free interval
   sensitivity: OS
   admin_censor_months: 60
 
 # ---------------- Blocks ----------------
-# Four blocks. A patient enters the analysis cohort only with all four and
+# A block is one type of data. There are four.
+# A patient enters the analysis cohort only with all four and
 # an endpoint, so every arm is compared on identical patients.
 blocks: [clinical, rna, mutation, methylation]
 
+# ---------------- Preparation of each block ----------------
+# Settings marked "inside each fold" are choices that depend on the data.
+# They are made on the training patients of each cross-validation fold
+# (src/luad/transforms.py), never once on everyone.
 preprocessing:
+  # gene_biotype: the kind of gene kept by prep/03_preprocess_rna.R.
+  # min_cpm and min_expressed_prop: the filter for weakly expressed genes,
+  # applied inside each fold. CPM is counts per million: a gene's count
+  # divided by the sample's total count, times one million.
   expression:
     gene_biotype: protein_coding
     min_cpm: 1.0               # expressed = at least this CPM ...
     min_expressed_prop: 0.30   # ... in at least this share of TRAINING samples
+  # gene_freq_threshold  a gene enters the block if it is mutated in at
+  #                      least this share of patients (0.05 = 5%)
+  # gene_max_features    at most this many genes, the most frequent first
+  #                      (both are applied inside each fold)
+  # tmb_exome_mb         the size of the sequenced exome in megabases.
+  #                      Tumour mutation burden (TMB) is the number of
+  #                      non-silent mutations divided by this.
+  # tmb_transform, pathways
+  #                      labels for the reader; no script reads them. The
+  #                      models use log10(TMB + 1), and the pathway list is
+  #                      config/sanchez_vega_pathways.tsv.
   mutation:
     gene_freq_threshold: 0.05  # refitted inside each fold
     gene_max_features: 25      # most frequent genes above the threshold
     tmb_exome_mb: 38
     tmb_transform: log10_plus_1
     pathways: sanchez_vega_2018
+  # A label for the reader: a 0/1 "was missing" column is added for some
+  # covariates (prep/05_preprocess_clinical.py). No script reads this
+  # setting, so changing it to false changes nothing.
   clinical:
     missing_indicators: true
 
+# ---------------- Width of the large blocks ----------------
+# "Width" is the number of features kept: genes for expression, probes for
+# methylation.
 features:
   # Width of the expression and methylation blocks (top-variance features,
   # chosen on training rows). Tuned inside the fold like any hyperparameter.
@@ -84,12 +171,30 @@ features:
   k_sweep: [50, 500, 2000]
 
 # ---------------- Cross-validation ----------------
+#   outer_folds    the patients are split into this many parts. Each part
+#                  is the test set once; the model is trained on the rest.
+#   outer_repeats  the whole split is repeated this many times with new
+#                  random parts: 5 x 5 = 25 train/test pairs ("folds").
+#   inner_folds    inside each training set, a second split of the same
+#                  kind chooses the settings of the model. No test patient
+#                  takes part in that choice.
 cv:
   outer_folds: 5
   outer_repeats: 5
   inner_folds: 5
 
 # ---------------- Models: two families, fixed ----------------
+# coxnet is the penalised Cox model.
+#   l1_ratio  the kind of penalty: 1 is lasso (drops features), values
+#             near 0 are close to ridge (shrinks them). All three are tried.
+#   n_alphas  how many penalty strengths are tried for each l1_ratio
+# rsf is the random survival forest.
+#   n_estimators_tune   number of trees while the settings are chosen
+#   n_estimators_final  number of trees in the final model
+#   max_features        features tried at each split: sqrt is the square
+#                       root of the number of features
+#   min_samples_leaf    smallest number of patients allowed in a leaf of a
+#                       tree; the three values are tried
 models:
   coxnet:
     l1_ratio: [0.1, 0.5, 0.9]
@@ -101,13 +206,19 @@ models:
     min_samples_leaf: [5, 10, 20]   # min_samples_split is twice the leaf
 
 # ---------------- Integration ----------------
+# Settings of MOFA, the latent-factor model.
+#   factors     how many factors the model starts with
+#   iterations  the number of training iterations it is allowed
 mofa:
   factors: 10
   top_k: 2000                  # expression genes and methylation probes per view
   iterations: 300
   min_factor_variance: 0.01    # factors explaining less than this in every view are dropped
 
+# ---------------- Scenarios ----------------
 # What the test patient is missing. `full` is nothing missing.
+# Each entry lists the blocks taken away from the test patients. Models
+# are always trained on complete data.
 scenarios:
   full: []
   no_rna: [rna]
@@ -116,6 +227,12 @@ scenarios:
   clinical_only: [rna, mutation, methylation]
 
 # ---------------- Inference ----------------
+# The bootstrap that gives every interval.
+#   n_resamples  how many times the patients are redrawn at random
+#   level        coverage of the intervals: 0.95 gives 95% intervals
+#   min_events_per_resample
+#                a redraw is skipped for a fold if fewer of its drawn test
+#                patients than this had an event
 bootstrap:
   n_resamples: 2000
   level: 0.95
@@ -148,6 +265,14 @@ contrasts:
     - [late@clinical_only, clinical]
 
 # ---------------- External validation ----------------
+# Models trained on TCGA and applied to the GEO cohorts.
+#   cohorts          the GEO series used
+#   shared_clinical  the clinical covariates that TCGA and the GEO cohorts
+#                    both have; the external clinical model uses only these
+#   endpoints        which GEO outcome stands for which TCGA outcome. rfs
+#                    is relapse-free survival, os is overall survival.
+#   contrasts        the comparisons made in the external cohorts, written
+#                    as above; `@geo` means "as available in GEO"
 external:
   cohorts: [GSE72094, GSE31210, GSE68465]
   shared_clinical: [age, sex_male, stage_ordinal, ever_smoker]
@@ -164,6 +289,15 @@ external:
     - [mofa@geo, late@geo]
 
 # ---------------- Biology ----------------
+# Settings of step 4 (gene lists and the protein network) and of two of
+# the checks in step 5.
+#   max_genes_per_list      a gene list is cut to this many genes
+#   factor_top_genes        how many genes are listed for a MOFA factor
+#   proliferation_metagene  cell-division genes whose mean expression is
+#                           used as a proliferation score
+#   sex_genes               genes on the Y chromosome, used to check that
+#                           expression rows belong to the right patients
+#   string: species         9606 is the NCBI identifier of human
 biology:
   prognostic_z: 3.0            # univariate Cox |z| for a gene to count as prognostic
   max_genes_per_list: 150

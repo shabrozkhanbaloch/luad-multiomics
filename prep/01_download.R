@@ -1,42 +1,93 @@
 #!/usr/bin/env Rscript
 # =============================================================
-# 01_download.R  -- acquire all raw data
+# 01_download.R -- fetch the raw public data
 #
+# What it is for
+#   Downloads the public sources this project is built on and saves them
+#   in data/raw/. It is the first step of rebuilding the data from scratch;
+#   `make download` runs it. You do not need it if you downloaded the
+#   prepared data with `make data`.
+#
+# The five blocks, in the order they run
+#   tcga      TCGA-LUAD RNA-seq gene counts from the Genomic Data Commons
+#             (GDC)                        -> tcga_luad_rnaseq_se.rds
+#   clinical  clinical covariates, taken out of the tcga file (no download)
+#                                          -> tcga_luad_clinical.rds
+#   cdr       the TCGA Clinical Data Resource: the survival endpoints
+#                                          -> TCGA-CDR-SupplementalTableS1.xlsx
+#   mc3       the MC3 somatic mutation calls, all TCGA cancers in one file
+#                                          -> mc3.v0.2.8.PUBLIC.maf.gz
+#   geo       three GEO series, the external cohorts
+#                                          -> GSE72094_eset.rds and two more
+#
+# Not fetched here
+#   The DNA methylation files have their own target, `make
+#   download-methylation`. The probe annotation file that
+#   prep/16_preprocess_methylation.R also needs
+#   (data/raw/methylation/HM450.hg38.manifest.tsv.gz) is not fetched by any
+#   script of this repository.
+#
+# Reads    config/config.yaml: the two download addresses (data: urls:),
+#          the TCGA project and workflow, and the list of GEO series.
+# Writes   the files above into data/raw/, one .md5 checksum file beside
+#          each, and one row per file in data/raw/MANIFEST.md.
+#          In this repository the whole data/ folder is ignored by git, so
+#          all of this stays on your computer. (The heading that this script
+#          writes into MANIFEST.md says the manifest is committed; that was
+#          the arrangement of the earlier project.)
+#
+# How heavy
+#   It needs the internet and the R packages of prep/00_setup_r.R. The MC3
+#   file alone is about 1 GB. The README gives about 10 GB for the download
+#   and the preparation together.
+#
+# How to run (from the project folder)
+#   make download                           # the same as the first line below
 #   Rscript prep/01_download.R              # everything
 #   Rscript prep/01_download.R tcga         # one block only
 #   Rscript prep/01_download.R clinical geo
 #
-# Writes to data/raw/, records md5 checksums, and appends to
-# data/raw/MANIFEST.md. Raw files are gitignored; the manifest
-# and checksums are committed.
-#
-# Idempotent: anything already downloaded is skipped.
-# Fault-tolerant: a block that fails is reported and the rest continue.
+# Safe to run again: anything already downloaded is skipped.
+# A block that fails is reported and the other blocks still run. The script
+# then ends with an error status and says which blocks to run again.
 # =============================================================
 
+# yaml reads the configuration file; digest computes checksums. The larger
+# packages (TCGAbiolinks, GEOquery) are loaded only inside the block that
+# needs them, so that one block can run without the others' packages.
 suppressPackageStartupMessages({
   library(yaml)
   library(digest)
 })
 
-# Large public files (MC3 is ~1 GB). R's default download timeout is 60s,
-# which silently truncates them - set it globally, not per-block.
+# Large public files (MC3 is ~1 GB). R's default download timeout is 60
+# seconds, which cuts a large file short without an error. Two hours are
+# allowed here, once, for every block.
 options(timeout = 7200)
 
+# Read the plan. RAW is the folder for raw data (data/raw). The seed is set
+# as a precaution; nothing in this script draws random numbers.
 cfg <- yaml::read_yaml("config/config.yaml")
 RAW <- cfg$paths$raw
 set.seed(cfg$project$seed)
 dir.create(RAW, recursive = TRUE, showWarnings = FALSE)
 
+# Which blocks to run: the ones named on the command line, or all five. The
+# order matters in one place: `clinical` reads the file that `tcga` writes.
 args   <- commandArgs(trailingOnly = TRUE)
 blocks <- if (length(args)) args else c("tcga", "clinical", "cdr", "mc3", "geo")
 
+# Print a message with the time of day in front of it.
 log_msg <- function(...) cat(format(Sys.time(), "[%H:%M:%S] "), ..., "\n", sep = "")
 
+# The names of the blocks (and GEO series) that failed. Filled in below and
+# reported at the end.
 failures <- character()
 
-# One failing block must not abort the others: that is what previously
-# stopped GEO from being fetched at all.
+# run_block() runs one block, but only if it was asked for, and catches any
+# error. One failing block must not abort the others: without this, an error
+# in an early block would stop the script before GEO, the last block, was
+# reached.
 run_block <- function(name, expr) {
   if (!(name %in% blocks)) return(invisible(NULL))
   tryCatch(force(expr), error = function(e) {
@@ -48,19 +99,23 @@ run_block <- function(name, expr) {
 }
 
 # ---- manifest helpers ------------------------------------------------------
+# A checksum (here: md5) is a short fingerprint of a file's content. If one
+# byte of the file changes, the fingerprint changes. record() computes it for
+# a downloaded file, then either compares it with a stored fingerprint or
+# stores it. The manifest (data/raw/MANIFEST.md) is the list of all files
+# with their description, size and fingerprint.
 record <- function(path, description) {
   if (!file.exists(path)) return(invisible(NULL))
   md5  <- digest::digest(path, algo = "md5", file = TRUE)
   size <- file.info(path)$size
   md5_file <- file.path(RAW, paste0(basename(path), ".md5"))
 
-  # A .md5 that came with the repository is an EXPECTATION, not scratch.
-  # Overwriting it with whatever just downloaded would turn the manifest
-  # from a check into a description: a silently changed upstream file
-  # would sail through and be recorded as if it had always been that,
-  # which is the one thing the manifest exists to prevent. So verify when
-  # there is something to verify against, and only record when there is
-  # not.
+  # A .md5 file that is already there is the EXPECTED fingerprint, not a
+  # note to overwrite. Overwriting it with whatever was just downloaded
+  # would hide the one thing the manifest exists to show: that a source
+  # file has changed since the results were computed. So: compare when
+  # there is something to compare with, and record only when there is not.
+  # A mismatch stops the block and prints what to do.
   if (file.exists(md5_file)) {
     expected <- sub("\\s.*$", "", readLines(md5_file, warn = FALSE)[1])
     if (nzchar(expected) && !identical(expected, md5)) {
@@ -77,6 +132,8 @@ record <- function(path, description) {
     return(invisible(NULL))
   }
 
+  # First time this file is seen: store its fingerprint, and add a row with
+  # its name, description, size and fingerprint to the manifest.
   writeLines(sprintf("%s  %s", md5, basename(path)), md5_file)
   cat(sprintf("| `%s` | %s | %.1f MB | `%s` |\n",
               basename(path), description, size / 1e6, md5),
@@ -84,6 +141,7 @@ record <- function(path, description) {
   log_msg("  recorded ", basename(path), "  (", round(size / 1e6, 1), " MB)")
 }
 
+# Create MANIFEST.md with its title and table heading, unless it exists.
 manifest_header <- function() {
   mf <- file.path(RAW, "MANIFEST.md")
   if (file.exists(mf)) return(invisible(NULL))
@@ -97,9 +155,13 @@ manifest_header <- function() {
 }
 manifest_header()
 
-# Existence is not validity: a download killed by a timeout leaves a partial
-# file that looks perfectly real. Every fetch lands on a .part file, is
-# validated, and only then moved into place.
+# A file that exists is not necessarily complete: a download killed by a
+# timeout leaves a partial file that looks perfectly real. Every fetch is
+# therefore written to a .part file first, checked, and only then renamed.
+# validate_file() is that check:
+#   any file   must exist and must not be empty
+#   .gz        must pass `gzip -t` (needs the gzip program on the computer)
+#   .xlsx      must start with the two bytes "PK", as every zip archive does
 validate_file <- function(path) {
   if (!file.exists(path) || file.info(path)$size == 0) return(FALSE)
   if (grepl("\\.gz$", path)) {
@@ -113,6 +175,12 @@ validate_file <- function(path) {
   TRUE
 }
 
+# fetch_url() downloads one file whose address is in config/config.yaml
+# under data: urls: <key>. In order:
+#   - the file is there and valid: skip it (and record a checksum if none)
+#   - the file is there but damaged: delete it and download again
+#   - no address is configured: say where to get the file by hand
+#   - otherwise: download to <file>.part, check it, rename it, record it
 fetch_url <- function(key, dest, description, where_to_get) {
   if (file.exists(dest)) {
     if (!validate_file(dest)) {
@@ -137,6 +205,8 @@ fetch_url <- function(key, dest, description, where_to_get) {
     return(invisible(FALSE))
   }
 
+  # on.exit() removes the .part file when the function ends for any reason,
+  # so that a failed download leaves nothing behind.
   part <- paste0(dest, ".part")
   on.exit(unlink(part), add = TRUE)
   log_msg("downloading ", basename(dest), " ...")
@@ -154,6 +224,15 @@ fetch_url <- function(key, dest, description, where_to_get) {
 
 # =============================================================
 # 1. TCGA-LUAD RNA-seq (STAR counts)
+#
+# TCGAbiolinks asks the GDC for every gene-expression file of the project,
+# downloads them into data/raw/GDCdata, and GDCprepare() joins them into one
+# SummarizedExperiment. That is an R object holding the tables of numbers
+# (genes in rows, samples in columns) together with a description of every
+# gene and every sample. "STAR - Counts" is the GDC's name for its workflow:
+# the reads are aligned with the program STAR and counted per gene.
+# Every sample of the project is downloaded, normal tissue included. The
+# choice of samples is made later, in the prep scripts, where it is logged.
 # =============================================================
 run_block("tcga", {
   log_msg("=== TCGA-LUAD RNA-seq (STAR - Counts) ===")
@@ -178,14 +257,19 @@ run_block("tcga", {
 # =============================================================
 # 2. Clinical covariates
 #
-# Taken from colData() of the SummarizedExperiment, NOT from
-# GDCquery_clinic(): the GDC API now returns multiple diagnosis rows
-# per patient and GDCquery_clinic() errors on the length mismatch
+# colData() is the sample description inside the SummarizedExperiment of
+# block 1. The covariates are taken from there, NOT from GDCquery_clinic():
+# the GDC API now returns multiple diagnosis rows per patient and
+# GDCquery_clinic() errors on the length mismatch
 # ("Supplied 585 items to be assigned to 943 items"). colData already
-# carries every covariate the proposal needs, plus the marker-paper
-# fields, and it is guaranteed aligned to the expression samples.
+# carries the covariates this project uses (age, sex, stage, smoking), plus
+# fields from the TCGA marker paper on LUAD (the columns that begin with
+# paper_), and its rows are the expression samples themselves, so nothing
+# has to be matched.
 #
-# Endpoints still come only from TCGA-CDR - never from here.
+# The survival endpoints still come only from TCGA-CDR (block 3), never
+# from here. The file keeps vital_status and the follow-up days for
+# reference, but no later step uses them as the outcome.
 # =============================================================
 run_block("clinical", {
   log_msg("=== TCGA-LUAD clinical covariates (from colData) ===")
@@ -200,6 +284,8 @@ run_block("clinical", {
     clin <- as.data.frame(colData(se))
     rm(se); invisible(gc())
 
+    # The columns to keep, if they are present. Columns that are not found
+    # are named in the log; they do not stop the block.
     keep <- c("barcode", "patient", "bcr_patient_barcode", "sample_type",
               "age_at_diagnosis", "age_at_index", "sex_at_birth", "race", "ethnicity",
               "ajcc_pathologic_stage", "ajcc_pathologic_t", "ajcc_pathologic_n",
@@ -222,6 +308,12 @@ run_block("clinical", {
 
 # =============================================================
 # 3. TCGA-CDR -- the ONLY endpoint source
+#
+# The TCGA Clinical Data Resource (Liu et al. 2018) is one table with
+# curated survival endpoints for every TCGA patient: among them overall
+# survival (OS) and the progression-free interval (PFI). Taking the outcome
+# from this one curated table means that every patient's endpoint follows
+# the same definition.
 # =============================================================
 run_block("cdr", {
   log_msg("=== TCGA-CDR (survival endpoints) ===")
@@ -235,6 +327,13 @@ run_block("cdr", {
 
 # =============================================================
 # 4. MC3 consensus somatic mutations
+#
+# MC3 (Ellrott et al. 2018) is one set of somatic mutation calls for all of
+# TCGA. A somatic mutation is one found in the tumour and not in the
+# patient's normal tissue. The file is a MAF file (Mutation Annotation
+# Format): a tab-separated table with one row per mutation found in one
+# tumour. It covers every cancer type; prep/04_preprocess_mutation.py
+# keeps the LUAD patients.
 # =============================================================
 run_block("mc3", {
   log_msg("=== MC3 consensus MAF ===")
@@ -248,6 +347,16 @@ run_block("mc3", {
 
 # =============================================================
 # 5. External GEO cohorts -- each fetched independently
+#
+# GEO is the Gene Expression Omnibus, a public archive of expression
+# studies. Each of the three series in config/config.yaml is downloaded as
+# its "series matrix" (the expression table with the sample descriptions)
+# together with the description of its microarray platform (getGPL = TRUE),
+# which is needed later to turn probe identifiers into gene symbols. The
+# result is saved as an ExpressionSet, the R object for such data.
+# Each series has its own tryCatch, so one series that fails does not stop
+# the other two. If GEO returns more than one matrix for a series, the whole
+# list is saved as it is and only the number of matrices is logged.
 # =============================================================
 run_block("geo", {
   log_msg("=== GEO external cohorts ===")
@@ -280,6 +389,11 @@ run_block("geo", {
 })
 
 # =============================================================
+# Summary: list the files now in data/raw/ with their sizes, name the
+# blocks that failed and print the command that runs just those again.
+# The last line printed, "Next: make overlap", names a target of the
+# earlier project that does not exist here. The next steps here are
+# `make download-methylation` and then `make prep`.
 log_msg("=== summary ===")
 files <- list.files(RAW, pattern = "\\.(rds|xlsx|gz)$", full.names = TRUE)
 if (length(files)) {
