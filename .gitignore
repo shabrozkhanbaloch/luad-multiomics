@@ -1,0 +1,12 @@
+.venv/
+data/
+logs/
+__pycache__/
+*.pyc
+.pytest_cache/
+results/tables/*_quick*
+results/figures/*_quick*
+
+# Working notes, kept on this computer only
+HANDOVER.md
+ZENODO_GUIDE.md

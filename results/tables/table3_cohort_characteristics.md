@@ -1,0 +1,29 @@
+# Table 3. Baseline characteristics of the analysis cohort
+
+TCGA-LUAD, 509 patients with clinical covariates and a usable progression-free interval.
+210 PFI events (41.3%); median follow-up 1.7 years among the censored.
+
+Descriptive only; no between-group tests are reported, because a table of
+cohort characteristics is not a univariable prognostic analysis.
+
+| Characteristic                 | All         | Event (PFI = 1)   | Censored (PFI = 0)   |
+|:-------------------------------|:------------|:------------------|:---------------------|
+| n                              | 509         | 210               | 299                  |
+| Age at diagnosis, median (IQR) | 66 (59–72)  | 66 (60–72)        | 66 (58–73)           |
+| Sex                            |             |                   |                      |
+| Male                           | 235 (46.2%) | 98 (46.7%)        | 137 (45.8%)          |
+| Female                         | 274 (53.8%) | 112 (53.3%)       | 162 (54.2%)          |
+| not recorded                   | 0 (0.0%)    | 0 (0.0%)          | 0 (0.0%)             |
+| Pathologic stage               |             |                   |                      |
+| I                              | 273 (53.6%) | 90 (42.9%)        | 183 (61.2%)          |
+| II                             | 124 (24.4%) | 66 (31.4%)        | 58 (19.4%)           |
+| III                            | 81 (15.9%)  | 38 (18.1%)        | 43 (14.4%)           |
+| IV                             | 26 (5.1%)   | 14 (6.7%)         | 12 (4.0%)            |
+| not recorded                   | 5 (1.0%)    | 2 (1.0%)          | 3 (1.0%)             |
+| Smoking status                 |             |                   |                      |
+| Never                          | 72 (14.1%)  | 29 (13.8%)        | 43 (14.4%)           |
+| Former, >15 yr                 | 129 (25.3%) | 47 (22.4%)        | 82 (27.4%)           |
+| Former, ≤15 yr                 | 166 (32.6%) | 76 (36.2%)        | 90 (30.1%)           |
+| Current                        | 119 (23.4%) | 45 (21.4%)        | 74 (24.7%)           |
+| not recorded                   | 23 (4.5%)   | 13 (6.2%)         | 10 (3.3%)            |
+| Pack-years, median (IQR)       | 30 (12–50)  | 33 (12–48)        | 30 (10–50)           |

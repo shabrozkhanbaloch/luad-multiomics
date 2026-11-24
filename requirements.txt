@@ -1,0 +1,14 @@
+# Python dependencies. Exact versions are frozen in results/pip_freeze.txt.
+numpy
+pandas
+pyarrow
+pyyaml
+scipy
+scikit-survival      # pulls a compatible scikit-learn
+mofapy2              # MOFA factor model
+networkx             # gene network, modules, export for Cytoscape
+requests             # STRING API
+matplotlib
+tabulate
+pytest
+py4cytoscape         # drives the Cytoscape desktop program (step 4b)

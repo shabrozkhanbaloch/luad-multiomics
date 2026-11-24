@@ -1,0 +1,18 @@
+# This file tells GitHub how to cite this project.
+# GitHub reads it and shows a "Cite this repository" button on the repo page.
+cff-version: 1.2.0
+message: "If you use this project, please cite it as below."
+type: software
+title: "LUAD multi-omics integration: does omics improve prognosis in lung adenocarcinoma, and which integration method survives a missing data type?"
+authors:
+  - family-names: "Baloch"
+    given-names: "Shabroz Khan"
+    alias: "shabrozkhanbaloch"
+license: MIT
+date-released: "2026-11-23"
+keywords:
+  - "multi-omics"
+  - "lung adenocarcinoma"
+  - "TCGA"
+  - "survival analysis"
+  - "MOFA"

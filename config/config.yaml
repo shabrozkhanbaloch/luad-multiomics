@@ -1,0 +1,183 @@
+# LUAD multi-omics integration: the one configuration file.
+# The analysis plan (blocks, models, arms, scenarios, contrasts) is fixed here
+# before anything is run. Adding to it afterwards is a change of plan and
+# should be recorded in README.md, not done quietly.
+
+project:
+  name: luad-multiomics
+  seed: 42
+
+paths:
+  raw:        data/raw
+  interim:    data/interim
+  processed:  data/processed
+  cache:      data/cache
+  tables:     results/tables
+  figures:    results/figures
+  network:    results/network
+  logs:       logs
+
+# ---------------- Data sources (used by prep/) ----------------
+data:
+  urls:
+    # TCGA-CDR-SupplementalTableS1.xlsx (Liu et al. 2018) - survival endpoints
+    tcga_cdr: https://api.gdc.cancer.gov/data/1b5f413e-a8d1-4d10-92eb-7c4ae739ed81
+    # mc3.v0.2.8.PUBLIC.maf.gz (Ellrott et al. 2018) - somatic mutations
+    mc3_maf:  https://api.gdc.cancer.gov/data/1c8cfe5f-e52d-41ba-94da-f15ea1337efc
+  tcga:
+    project: TCGA-LUAD
+    workflow: STAR - Counts
+    sample_types: ["01"]
+    dedup_rule: prefer_vial_A_then_lowest_plate
+  mutation:
+    source: MC3 PanCanAtlas consensus MAF
+    filter: PASS
+    nonsilent:
+      - Missense_Mutation
+      - Nonsense_Mutation
+      - Frame_Shift_Del
+      - Frame_Shift_Ins
+      - In_Frame_Del
+      - In_Frame_Ins
+      - Splice_Site
+      - Translation_Start_Site
+      - Nonstop_Mutation
+  clinical:
+    endpoint_source: TCGA-CDR (Liu et al. 2018, Table S1)
+  geo:
+    - {id: GSE72094, platform: GPL15048, role: primary_external,
+       tumour_field: "source_name_ch1",   tumour_value: "lung adenocarcinoma", expected_n: 442}
+    - {id: GSE31210, platform: GPL570,   role: external_stage_matched,
+       tumour_field: "tissue:ch1",        tumour_value: "primary lung tumor",  expected_n: 226}
+    - {id: GSE68465, platform: GPL96,    role: optional_extension,
+       tumour_field: "disease_state:ch1", tumour_value: "Lung Adenocarcinoma", expected_n: 443}
+
+endpoint:
+  primary: PFI                 # progression-free interval
+  sensitivity: OS
+  admin_censor_months: 60
+
+# ---------------- Blocks ----------------
+# Four blocks. A patient enters the analysis cohort only with all four and
+# an endpoint, so every arm is compared on identical patients.
+blocks: [clinical, rna, mutation, methylation]
+
+preprocessing:
+  expression:
+    gene_biotype: protein_coding
+    min_cpm: 1.0               # expressed = at least this CPM ...
+    min_expressed_prop: 0.30   # ... in at least this share of TRAINING samples
+  mutation:
+    gene_freq_threshold: 0.05  # refitted inside each fold
+    gene_max_features: 25      # most frequent genes above the threshold
+    tmb_exome_mb: 38
+    tmb_transform: log10_plus_1
+    pathways: sanchez_vega_2018
+  clinical:
+    missing_indicators: true
+
+features:
+  # Width of the expression and methylation blocks (top-variance features,
+  # chosen on training rows). Tuned inside the fold like any hyperparameter.
+  k_grid: [50, 500]
+  # The width sweep in the checks fits each of these as a fixed width.
+  k_sweep: [50, 500, 2000]
+
+# ---------------- Cross-validation ----------------
+cv:
+  outer_folds: 5
+  outer_repeats: 5
+  inner_folds: 5
+
+# ---------------- Models: two families, fixed ----------------
+models:
+  coxnet:
+    l1_ratio: [0.1, 0.5, 0.9]
+    n_alphas: 50
+  rsf:
+    n_estimators_tune: 300
+    n_estimators_final: 1000
+    max_features: sqrt
+    min_samples_leaf: [5, 10, 20]   # min_samples_split is twice the leaf
+
+# ---------------- Integration ----------------
+mofa:
+  factors: 10
+  top_k: 2000                  # expression genes and methylation probes per view
+  iterations: 300
+  min_factor_variance: 0.01    # factors explaining less than this in every view are dropped
+
+# What the test patient is missing. `full` is nothing missing.
+scenarios:
+  full: []
+  no_rna: [rna]
+  no_methylation: [methylation]
+  no_mutation: [mutation]
+  clinical_only: [rna, mutation, methylation]
+
+# ---------------- Inference ----------------
+bootstrap:
+  n_resamples: 2000
+  level: 0.95
+  min_events_per_resample: 10
+
+# The contrasts, fixed in advance. Each is "a minus b"; an arm is written
+# arm@scenario and the scenario defaults to full. Each runs for both models.
+contrasts:
+  prediction:                  # Part 1: does a block add to clinical?
+    - [clinical+rna, clinical]
+    - [clinical+mutation, clinical]
+    - [clinical+methylation, clinical]
+    - [early, clinical]
+  integration:                 # Part 2, nothing missing
+    - [late, clinical]
+    - [mofa, clinical]
+    - [late, early]
+    - [mofa, early]
+    - [mofa, late]
+  missing:                     # Part 2, a block missing at test time
+    - [late@no_rna, early@no_rna]
+    - [mofa@no_rna, early@no_rna]
+    - [late@no_methylation, early@no_methylation]
+    - [mofa@no_methylation, early@no_methylation]
+    - [late@no_mutation, early@no_mutation]
+    - [mofa@no_mutation, early@no_mutation]
+    - [early@clinical_only, clinical]
+    - [mofa@clinical_only, clinical]
+  control:                     # must be exactly zero: the same predictions twice
+    - [late@clinical_only, clinical]
+
+# ---------------- External validation ----------------
+external:
+  cohorts: [GSE72094, GSE31210, GSE68465]
+  shared_clinical: [age, sex_male, stage_ordinal, ever_smoker]
+  endpoints: {PFI: rfs, OS: os}    # TCGA endpoint -> GEO endpoint
+  # Mutation and methylation do not exist in the GEO cohorts, so every
+  # external patient is a real case of the "two blocks missing" scenario.
+  contrasts:
+    - [clinical+rna, clinical]
+    - [early@geo, clinical]
+    - [late@geo, clinical]
+    - [mofa@geo, clinical]
+    - [late@geo, early@geo]
+    - [mofa@geo, early@geo]
+    - [mofa@geo, late@geo]
+
+# ---------------- Biology ----------------
+biology:
+  prognostic_z: 3.0            # univariate Cox |z| for a gene to count as prognostic
+  max_genes_per_list: 150
+  model_gene_min_folds: 5      # a gene must be selected in at least this many of 25 folds
+  factor_top_genes: 50
+  proliferation_metagene: [MKI67, TOP2A, CDK1, BIRC5, RRM2, CCNB1, AURKA, PLK1]
+  sex_genes: [RPS4Y1, DDX3Y, KDM5D, UTY, EIF1AY]
+  string:
+    species: 9606
+    required_score: 700        # STRING "high confidence"
+
+# ---------------- Cytoscape (step 4b) ----------------
+# Used only if Cytoscape is not already open. `cytoscape` is the launcher in
+# ~/.local/bin (also in the desktop menu); it starts Cytoscape 3.10 with the
+# Java 17 that ships beside it.
+cytoscape:
+  launcher: ~/.local/bin/cytoscape

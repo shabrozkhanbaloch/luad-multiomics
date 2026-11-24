@@ -1,0 +1,17 @@
+part,model,a,b,metric,difference,ci_low,ci_high,verdict
+integration,coxnet,late,early,uno_c,0.004604231873046927,-0.01258995305802594,0.02180055336678436,not resolved
+integration,coxnet,mofa,early,uno_c,0.013243505607832162,-0.008671568267357386,0.03599989402042955,not resolved
+integration,rsf,late,early,uno_c,0.05157769407350821,0.02226956245218738,0.08305632872489982,a better
+integration,rsf,mofa,early,uno_c,0.03789943220223546,0.003940795474962709,0.07204312862001225,a better
+missing,coxnet,late@no_rna,early@no_rna,uno_c,0.015544346344716242,-0.000680998499585893,0.0317825149939863,not resolved
+missing,coxnet,mofa@no_rna,early@no_rna,uno_c,0.02012849001395678,-0.005704330602406383,0.044023957251408286,not resolved
+missing,coxnet,late@no_methylation,early@no_methylation,uno_c,0.0033775402126914322,-0.012071793153637028,0.019019032917742165,not resolved
+missing,coxnet,mofa@no_methylation,early@no_methylation,uno_c,0.008787144576113626,-0.015449626099392886,0.033698920810246245,not resolved
+missing,coxnet,late@no_mutation,early@no_mutation,uno_c,0.008465659405665682,-0.0073752149292878235,0.024070725494137517,not resolved
+missing,coxnet,mofa@no_mutation,early@no_mutation,uno_c,0.014827599605341635,-0.006565854391660553,0.0370318479771591,not resolved
+missing,rsf,late@no_rna,early@no_rna,uno_c,0.07263359494194643,0.03245748138938297,0.113888449657847,a better
+missing,rsf,mofa@no_rna,early@no_rna,uno_c,0.06539281435152844,0.022744152993007,0.1085216798224029,a better
+missing,rsf,late@no_methylation,early@no_methylation,uno_c,0.05428172573756851,0.02218232690614088,0.08991057999166234,a better
+missing,rsf,mofa@no_methylation,early@no_methylation,uno_c,0.03252942137856918,-0.0005909991930410254,0.06775704385961913,not resolved
+missing,rsf,late@no_mutation,early@no_mutation,uno_c,0.05424604009110223,0.024633619673444972,0.08592623625965491,a better
+missing,rsf,mofa@no_mutation,early@no_mutation,uno_c,0.03812253563873447,0.0041306383458344954,0.07201337283407856,a better
