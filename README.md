@@ -209,6 +209,8 @@ The analysis reads the 14 files of `data/processed` and `data/interim/endpoints.
 
    What was tested, on 24 November 2026: `make prep`, in an empty copy of the repository, from the raw files downloaded in August 2026. All 15 files came out with exactly the same content as the archive: every value, every label, every column type. Twelve of them differ from the archive byte for byte, because a newer version of the R package that writes the files (arrow 26) lays the same table out differently on disk; the three files written by Python are byte-identical. So this route gives the same data, but not an archive with the same checksum.
 
+   R versions: `renv.lock` records the R 4.3.3 set of packages the files were first made with, in the earlier project. The 24 November test used R 4.6 with newer packages (arrow 26.0.1, maftools 2.28.0) and still gave identical content; `renv.lock` is kept as the record of the original versions, not as a requirement.
+
    What was not tested: the downloads themselves. They were not repeated, and the sources change with new data releases, so a download made today may differ from the one made in August 2026. For reproducing the reported numbers exactly, use route 1.
 
 ## Relation to my MSc dissertation
