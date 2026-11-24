@@ -54,26 +54,34 @@ Primary endpoint: progression-free interval, 176 events. Metric: Uno's C (0.5 is
 
 ![Analysis workflow](results/figures/fig1_workflow.svg)
 
-## Run it
+## Run it: reproduce the results
 
 You need Python 3.13, `make`, about 4 GB of free disk and about 3 hours. It was run and tested on Linux only. The internet is needed for `make setup` and `make data`, and not after that. R and Cytoscape are **not** needed.
 
 ```bash
+git clone https://github.com/shabrozkhanbaloch/luad-multiomics.git
+cd luad-multiomics
 make setup     # once: create .venv and install the pinned packages (about a minute)
                # if your python3 is not 3.13: make setup PYTHON=/path/to/python3.13
 make data      # once: download the prepared data from Zenodo and check it (1.5 GB)
 make test      # 10 seconds, synthetic data: is the installation sound?
 make quick     # 1 minute, real data, tiny settings: does the pipeline run here?
-make all       # everything, in order: about 3 hours with 12 workers
+make all       # everything, in order: about 3 hours with 12 workers (longer on a busy machine)
 make verify    # a second: do your tables match the published ones?
 make help      # the individual steps and what they cost
 ```
 
-`make all` ends with `make verify`, which compares the 19 result tables of your run with the published ones in `tests/reference_tables/` and prints PASS or the difference for each.
+`make all` ends with `make verify`, which compares the 26 result tables of your run with the published ones in `tests/reference_tables/` and prints PASS or the difference for each. A successful run ends with:
+
+```
+All 26 tables agree with the published run.
+```
+
+To keep a log while it runs: `make all 2>&1 | tee make_all.log`. The steps run at the lowest priority and leave a quarter of the processor free, so the computer stays usable. If Cytoscape is installed, step 4b opens its window for about a minute; leave it open. Afterwards, `git status` shows only the PDF files (they store their creation date) and the two Cytoscape pictures as changed.
 
 **It has been reproduced, twice.** On 23 November 2026 `make all` was rerun in a clean copy with a newly built environment and gave the same numbers. On 24 November the repository was cloned into an empty folder, its results were deleted, the environment was built from the pinned versions, the data came from the archive, and `make all` ran from start to finish in 3 hours with 12 workers: all 19 tables passed `make verify`, and every table, `RESULTS.md`, every source-data file and all 15 figures drawn by Python came out byte for byte or pixel for pixel identical. What is not identical from run to run: the creation date inside the PDF files, and the two pictures exported by the Cytoscape program, which differed in 0.05% of their pixels.
 
-**If a step fails**, the run stops there. Fix the cause and continue with the remaining steps, for example `make biology cytoscape permute checks report cohort figures verify`. Finished steps do not need to be repeated.
+**If a step fails**, the run stops there. Fix the cause and continue with the remaining steps, for example `make biology cytoscape permute checks survival factor report cohort figures verify`. Finished steps do not need to be repeated.
 
 **New to the project?** Read "Words used here" below, then `config/config.yaml` (the whole plan, with comments), then the scripts in the order of the table. Each script starts with what it is for, what it reads, what it writes and how long it takes.
 

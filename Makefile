@@ -32,7 +32,7 @@ help:
 	@echo "  make survival   10. survival curves by predicted risk; added after the first run (seconds)"
 	@echo "  make factor     11. what MOFA factor 2 is; added after the first run (seconds)"
 	@echo "A failed step stops the run; continue with the remaining targets, for example"
-	@echo "  make biology cytoscape permute checks report figures cohort"
+	@echo "  make biology cytoscape permute checks survival factor report cohort figures verify"
 	@echo ""
 	@echo "Quick"
 	@echo "  make test        unit tests on synthetic data (10 seconds, no data needed)"
